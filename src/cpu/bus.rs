@@ -1,27 +1,28 @@
-pub struct Bus {
-    &mut memory[u8],
+pub struct Bus<'a> {
+    pub memory: &'a mut [u8],
     pub data: u8,
     pub address: u16,
 }
 
-impl Bus {
+impl Bus<'_> {
     // reads
-    pub fn read(self) -> u8 {
-        self.data = self.memory[self.address]
+    pub fn read(&mut self) -> u8 {
+        self.data = self.memory[self.address as usize];
+        self.data
     }
-    pub fn readAt(self, address: u16) -> u8 {
+    pub fn readAt(&mut self, address: u16) -> u8 {
         self.address = address;
         self.read()
     }
     // writes
-    pub fn write(self) {
-        self.memory[self.address] = self.data;
+    pub fn write(&mut self) {
+        self.memory[self.address as usize] = self.data;
     }
-    pub fn writeTo(self, address: u16) {
+    pub fn writeTo(&mut self, address: u16) {
         self.address = address;
         self.write();
     }
-    pub fn writeValueTo(self, address: u16, val: u8) {
+    pub fn writeValueTo(&mut self, address: u16, val: u8) {
         self.address = address;
         self.data = val;
         self.write();

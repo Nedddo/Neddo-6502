@@ -1,11 +1,11 @@
-const F_N = 0b1000`0000;
-const F_V = 0b0100`0000;
-const F_FIXED = 0b0010`0000;
-const F_B = 0b0001`0000;
-const F_D = 0b0000`1000;
-const F_I = 0b0000`0100;
-const F_Z = 0b0000`0010;
-const F_C = 0b0000`0001;
+const F_N: u8     = 0b1000_0000;
+const F_V: u8     = 0b0100_0000;
+const F_FIXED: u8 = 0b0010_0000;
+const F_B: u8     = 0b0001_0000;
+const F_D: u8     = 0b0000_1000;
+const F_I: u8     = 0b0000_0100;
+const F_Z: u8     = 0b0000_0010;
+const F_C: u8     = 0b0000_0001;
 
 #[derive(Default)]
 struct Flags {
@@ -20,19 +20,19 @@ struct Flags {
 }
 
 impl Flags {
-    fn value(self) -> u8 {
-        val: u8 = F_FIXED; // bit 5 is always 1
-        if n { val |= F_N }
-        if v { val |= F_V }
-        if b { val |= F_B }
-        if d { val |= F_D }
-        if i { val |= F_I }
-        if z { val |= F_Z }
-        if c { val |= F_C }
+    fn value(&self) -> u8 {
+        let mut val: u8 = F_FIXED; // bit 5 is always 1
+        if self.n { val |= F_N }
+        if self.v { val |= F_V }
+        if self.b { val |= F_B }
+        if self.d { val |= F_D }
+        if self.i { val |= F_I }
+        if self.z { val |= F_Z }
+        if self.c { val |= F_C }
         val
     }
 
-    fn set(self, val: u8) {
+    fn set(&mut self, val: u8) {
         self.n = (val & F_N) == F_N;
         self.v = (val & F_V) == F_V;
         self.b = (val & F_B) == F_B;
@@ -50,7 +50,7 @@ pub struct CPU {
     a: u8,
     x: u8,
     y: u8,
-    p: Flags
+    p: Flags,
 }
 
-mod bus;
+pub(super) mod bus;

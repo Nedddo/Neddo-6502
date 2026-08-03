@@ -1,10 +1,10 @@
+mod cpu;
+
 use std::fs;
 use std::io;
-use std::option;
+use cpu::CPU;
 
 
-fn main() -> io::Result<()> {
-    let rope: Rope = Rope::new();
+fn main() {
     println!("Hello, world!");
-    Ok(())
 }
