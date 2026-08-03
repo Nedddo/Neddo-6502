@@ -20,7 +20,7 @@ struct Flags {
 }
 
 impl Flags {
-    value(self) -> u8 {
+    fn value(self) -> u8 {
         val: u8 = F_FIXED; // bit 5 is always 1
         if n { val |= F_N }
         if v { val |= F_V }
@@ -32,7 +32,7 @@ impl Flags {
         val
     }
 
-    set(self, val: u8) {
+    fn set(self, val: u8) {
         if val & F_N == F_N { self.n = true }
         if val & F_V == F_V { self.v = true }
         if val & F_B == F_B { self.b = true }
@@ -52,3 +52,5 @@ pub struct CPU {
     y: u8,
     p: Flags
 }
+
+mod bus;
