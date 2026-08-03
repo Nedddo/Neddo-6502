@@ -33,13 +33,13 @@ impl Flags {
     }
 
     fn set(self, val: u8) {
-        if val & F_N == F_N { self.n = true }
-        if val & F_V == F_V { self.v = true }
-        if val & F_B == F_B { self.b = true }
-        if val & F_D == F_D { self.d = true }
-        if val & F_I == F_I { self.i = true }
-        if val & F_Z == F_Z { self.z = true }
-        if val & F_C == F_C { self.c = true }
+        self.n = (val & F_N) == F_N;
+        self.v = (val & F_V) == F_V;
+        self.b = (val & F_B) == F_B;
+        self.d = (val & F_D) == F_D;
+        self.i = (val & F_I) == F_I;
+        self.z = (val & F_Z) == F_Z;
+        self.c = (val & F_C) == F_C;
     }
 }
 
