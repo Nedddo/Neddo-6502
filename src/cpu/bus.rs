@@ -7,7 +7,7 @@ pub struct Bus {
 impl Bus {
     // reads
     pub fn read(self) -> u8 {
-        self.memory[self.address]
+        self.data = self.memory[self.address]
     }
     pub fn readAt(self, address: u16) -> u8 {
         self.address = address;
