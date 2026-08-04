@@ -4,6 +4,17 @@ pub struct Bus<'a> {
     pub address: u16,
 }
 
+// constructor
+impl<'a> Bus<'a> {
+    pub fn new(memory: &'a mut [u8]) -> Self {
+        Bus {
+            memory,
+            data: 0,
+            address: 0,
+        }
+    }
+}
+
 impl Bus<'_> {
     // reads
     pub fn read(&mut self) -> u8 {
