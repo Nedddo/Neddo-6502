@@ -21,7 +21,7 @@ impl Bus<'_> {
         self.data = self.memory[self.address as usize];
         self.data
     }
-    pub fn readAt(&mut self, address: u16) -> u8 {
+    pub fn read_at(&mut self, address: u16) -> u8 {
         self.address = address;
         self.read()
     }
@@ -29,11 +29,11 @@ impl Bus<'_> {
     pub fn write(&mut self) {
         self.memory[self.address as usize] = self.data;
     }
-    pub fn writeTo(&mut self, address: u16) {
+    pub fn write_to(&mut self, address: u16) {
         self.address = address;
         self.write();
     }
-    pub fn writeValueTo(&mut self, address: u16, val: u8) {
+    pub fn write_value_to(&mut self, address: u16, val: u8) {
         self.address = address;
         self.data = val;
         self.write();
