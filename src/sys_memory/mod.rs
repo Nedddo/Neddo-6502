@@ -1,0 +1,20 @@
+// trait to be implemented for system-specific memory configurations
+pub trait Addressable {
+    fn read (&self, address: u16) -> u8;
+    fn write(&mut self, address: u16, data: u8);
+}
+
+// most basic memory configuration - 0 memory mapping all 64kb of address space are fully accessible
+pub struct TestMemory {
+    memory: [u8; 0x1000],
+}
+
+impl Addressable for TestMemory {
+    fn read(&self, address: u16) -> u8 {
+        self.memory[address as usize]
+    }
+    fn write(&mut self, address: u16, data: u8) {
+        self.memory[address as usize] = data;
+    }
+}
+
