@@ -6,7 +6,15 @@ pub trait Addressable {
 
 // most basic memory configuration - 0 memory mapping all 64kb of address space are fully accessible
 pub struct TestMemory {
-    memory: [u8; 0x1000],
+    memory: [u8; 0x10000],
+}
+
+impl TestMemory {
+    pub fn new() -> Self {
+        Self {
+            memory: [0u8; 0x10000]
+        }
+    }
 }
 
 impl Addressable for TestMemory {
