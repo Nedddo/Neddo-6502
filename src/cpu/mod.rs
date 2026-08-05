@@ -9,6 +9,8 @@ const F_C: u8     = 0b0000_0001;
 
 use cpu_bus::Bus;
 
+use crate::memory::Addressable;
+
 #[derive(Default)]
 struct Flags {
     // 8-bits encoding 7 flags, bit 5 is forced to 1
@@ -45,19 +47,19 @@ impl Flags {
     }
 }
 
-pub struct CPU<'a> {
+pub struct CPU {
     pc: u16,
     s: u8,
     a: u8,
     x: u8,
     y: u8,
     p: Flags,
-    bus: Bus<'a>, // cpu bus, represents hardwired connection between cpu and memory
+    bus: Bus, // cpu bus, represents hardwired connection between cpu and memory
 }
 
 // constructor
-impl<'a> CPU<'a> {
-    pub fn new(memory: &'a mut [u8]) -> Self {
+impl CPU {
+    pub fn new() -> Self {
         Self {
             pc: 0,
             s: 0,
@@ -65,32 +67,66 @@ impl<'a> CPU<'a> {
             x: 0,
             y: 0,
             p: Flags::default(),
-            bus: Bus::new(memory),
+            bus: Bus::new(),
         }
     }
 }
 
 // bus reads
-impl CPU<'_> {
+impl CPU {
     // assumes PC is moved to address bus explicitly at the start of instruction execution
-    fn fetch(&mut self) -> u8 {
-        self.bus.read()
+    fn fetch(&mut self, mem: &mut dyn Addressable) -> u8 {
+        self.bus.read(mem)
     }
     // read memory at address bus, increment address bus
-    fn fetch_low(&mut self) -> u8 {
-        let data = self.bus.read();
+    fn fetch_low(&mut self, mem: &mut dyn Addressable) -> u8 {
+        let data = self.bus.read(mem);
         self.bus.address += 1;
         data
     }
     // fetch high byte from memory, assumes data bus contains low byte as last read. Sets Address bus.
-    fn fetch_high(&mut self) -> u8 {
+    fn fetch_high(&mut self, mem: &mut dyn Addressable) -> u8 {
         let lo = self.bus.data;
-        let hi = self.bus.read();
+        let hi = self.bus.read(mem);
         let address = ((hi as u16) << 8) | (lo as u16);
         self.bus.address = address;
         hi // hello!
     }
 }
+
+#[cfg(test)] 
+// test suite for cpu memory accesses 
+mod cpu_memory_tests {
+    use crate::memory::TestMemory;
+    use super::*;
+
+    #[test]
+    fn cpu_fetch_test() {
+        let mut mem = TestMemory::new();
+        // write 0xBEEF to memory (little endian)
+        mem.write(0, 0xEF);
+        mem.write(1, 0xBE);
+        let mut cpu = CPU::new();
+        // set address bus to 0
+        cpu.bus.address = 0;
+        assert_eq!(cpu.fetch(&mut mem), 0xEF);
+    }
+    #[test]
+    fn cpu_fetch_address_test() {
+        let mut mem = TestMemory::new();
+        // write 0xBEEF to memory (little endian)
+        mem.write(0, 0xEF);
+        mem.write(1, 0xBE);
+        let mut cpu = CPU::new();
+        // set address bus to 0
+        cpu.bus.address = 0;
+        assert_eq!(cpu.fetch_low(&mut mem), 0xEF);
+        assert_eq!(cpu.fetch_high(&mut mem), 0xBE);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+
+    }
+}
+
 
 
 pub(super) mod cpu_bus;
