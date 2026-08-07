@@ -15,7 +15,8 @@ mod cpu_memory_tests {
         let mut cpu = CPU::new();
         // set address bus to 0
         cpu.bus.address = 0;
-        assert_eq!(fetch_pc(&mut cpu, &mut mem), 0xEF);
+        fetch_pc(&mut cpu, &mut mem);
+        assert_eq!(cpu.bus.data, 0xEF);
     }
     #[test]
     fn cpu_fetch_address_test() {
@@ -26,8 +27,10 @@ mod cpu_memory_tests {
         let mut cpu = CPU::new();
         // set address bus to 0
         cpu.bus.address = 0;
-        assert_eq!(fetch_pc(&mut cpu, &mut mem), 0xEF);
-        assert_eq!(fetch_pc_high(&mut cpu, &mut mem), 0xBE);
+        fetch_pc(&mut cpu, &mut mem);
+        assert_eq!(cpu.bus.data, 0xEF);
+        fetch_pc_high(&mut cpu, &mut mem);
+        assert_eq!(cpu.bus.data, 0xBE);
         assert_eq!(cpu.bus.address, 0xBEEF);
 
     }
