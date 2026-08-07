@@ -10,8 +10,9 @@ const F_C: u8     = 0b0000_0001;
 use cpu_bus::Bus;
 
 use crate::memory::Addressable;
+use std::collections::VecDeque;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Flags {
     // 8-bits encoding 7 flags, bit 5 is forced to 1
     n: bool,
@@ -45,6 +46,11 @@ impl Flags {
         self.z = (val & F_Z) == F_Z;
         self.c = (val & F_C) == F_C;
     }
+    // used in loads and transfers
+    fn update_nz(&mut self, val: u8) {
+        self.z = val == 0;
+        self.n = (val & F_N) == F_N // negative = true if 7th bit is signed
+    }
 }
 
 pub struct CPU {
@@ -55,6 +61,7 @@ pub struct CPU {
     y: u8,
     p: Flags,
     bus: Bus, // cpu bus, represents hardwired connection between cpu and memory
+    m_op_queue: VecDeque<fn(&mut CPU, &mut dyn Addressable)>,
 }
 
 // constructor
@@ -68,11 +75,38 @@ impl CPU {
             y: 0,
             p: Flags::default(),
             bus: Bus::new(),
+            m_op_queue: VecDeque::new(),
         }
     }
 }
 
+// execution
+impl CPU {
+    pub fn cycle(&mut self, mem: &mut dyn Addressable) {
+        use instruction::*;
+        // current instruction has not finsihed execution
+        if let Some(this_cycle) =  self.m_op_queue.pop_front() {
+            this_cycle(self, mem);
+        }
+        else {
+            // fetch and decode next instruction
+            self.bus.address = self.pc;
+            self.pc += 1;
+            let inst = Instruction::decode(self.fetch(mem));
+
+            match inst.op {
+                Operation::TAX => {
+                    self.m_op_queue.push_back(CPU::tax);
+                },
+                _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
+            }
+        }
+    }
+    // TODO: Implement reset
+}
+
 // bus reads
+// TODO: Redo these, just byte the bullet and make them more micro-op specific
 impl CPU {
     // assumes PC is moved to address bus explicitly at the start of instruction execution
     fn fetch(&mut self, mem: &mut dyn Addressable) -> u8 {
@@ -94,40 +128,17 @@ impl CPU {
     }
 }
 
-#[cfg(test)] 
-// test suite for cpu memory accesses 
-mod cpu_memory_tests {
-    use crate::memory::TestMemory;
-    use super::*;
-
-    #[test]
-    fn cpu_fetch_test() {
-        let mut mem = TestMemory::new();
-        // write 0xBEEF to memory (little endian)
-        mem.write(0, 0xEF);
-        mem.write(1, 0xBE);
-        let mut cpu = CPU::new();
-        // set address bus to 0
-        cpu.bus.address = 0;
-        assert_eq!(cpu.fetch(&mut mem), 0xEF);
-    }
-    #[test]
-    fn cpu_fetch_address_test() {
-        let mut mem = TestMemory::new();
-        // write 0xBEEF to memory (little endian)
-        mem.write(0, 0xEF);
-        mem.write(1, 0xBE);
-        let mut cpu = CPU::new();
-        // set address bus to 0
-        cpu.bus.address = 0;
-        assert_eq!(cpu.fetch_low(&mut mem), 0xEF);
-        assert_eq!(cpu.fetch_high(&mut mem), 0xBE);
-        assert_eq!(cpu.bus.address, 0xBEEF);
-
+// micro-ops (some of these are full 2-cycle instructions with the first cycle being the fetch-decode)
+// TODO(?): Move these to a seperate module, still deciding
+impl CPU {
+    // doesn't use memory, still needs it because all m-ops must have the same signature
+    fn tax(&mut self, _: &mut dyn Addressable) {
+        self.x = self.a;
+        self.p.update_nz(self.x);
     }
 }
 
-
-
 pub(super) mod cpu_bus;
 pub(super) mod instruction;
+pub(super) mod ops;
+mod tests;
