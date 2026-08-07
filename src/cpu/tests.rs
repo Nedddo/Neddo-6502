@@ -80,5 +80,80 @@ mod cpu_functionality_tests {
         println!("Test Passed!");
 
     }
+    #[test]
+    fn cpu_adc_test() {
+        let mut mem = TestMemory::new();
+        // write adc immediate
+        mem.write(0, 0x69); // 69 and 67!!!
+        mem.write(1, 0x67);
+        let mut cpu = CPU::new();
+        // give register a some value
+        cpu.a = 0x10;
+        // -- test 1
+        println!("Testing addition...");
+
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.a, 0x77);
+
+        println!("Test Passed!");
+
+        println!("Testing add where carry is true...");
+
+        cpu.pc = 0;
+        cpu.a = 0x0;
+        cpu.p.c = true;
+
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.a, 0x68);
+
+        println!("Test Passed!");
+
+        println!("Testing add where carry occurs...");
+
+        cpu.pc = 0;
+        cpu.a = 0xF9;
+
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.a, 0x60);
+        assert_eq!(cpu.p.c, true);
+        assert_eq!(cpu.p.v, false);
+
+        println!("Test Passed!");
+
+        println!("Testing add where carry and overflow occurs...");
+
+        cpu.pc = 0;
+        cpu.a = 0x80;
+        mem.write(1, 0x80);
+
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.p.c, true);
+        assert_eq!(cpu.p.v, true);
+
+        println!("Test Passed!");
+        println!("Testing add where only overflow occurs...");
+
+        cpu.pc = 0;
+        cpu.a = 0x7F;
+        cpu.p.c = true; 
+        mem.write(1, 0x00);
+        // 127 + 00 + 1 = -128
+
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.p.c, false);
+        assert_eq!(cpu.p.v, true);
+
+        println!("Test Passed!");
+    }
 }
 
