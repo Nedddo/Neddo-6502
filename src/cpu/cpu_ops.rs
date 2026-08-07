@@ -27,3 +27,23 @@ pub fn tax(cpu: &mut CPU, _: SysMem) {
     cpu.x = cpu.a;
     cpu.p.update_nz(cpu.x);
 }
+pub fn txa(cpu: &mut CPU, _: SysMem) {
+    cpu.a = cpu.x;
+    cpu.p.update_nz(cpu.a);
+}
+pub fn tay(cpu: &mut CPU, _: SysMem) {
+    cpu.y = cpu.a;
+    cpu.p.update_nz(cpu.y);
+}
+pub fn tya(cpu: &mut CPU, _: SysMem) {
+    cpu.a = cpu.y;
+    cpu.p.update_nz(cpu.a);
+}
+// stack transfers do not update any flags
+pub fn txs(cpu: &mut CPU, _: SysMem) {
+    cpu.s = cpu.x;
+}
+pub fn tsx(cpu: &mut CPU, _: SysMem) {
+    cpu.x = cpu.s;
+}
+
