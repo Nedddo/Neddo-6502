@@ -11,6 +11,7 @@ use cpu_bus::Bus;
 
 use crate::memory::Addressable;
 use std::collections::VecDeque;
+use cpu_ops::*;
 
 #[derive(Default, Debug)]
 struct Flags {
@@ -61,7 +62,7 @@ pub struct CPU {
     y: u8,
     p: Flags,
     bus: Bus, // cpu bus, represents hardwired connection between cpu and memory
-    m_op_queue: VecDeque<fn(&mut CPU, &mut dyn Addressable)>,
+    m_op_queue: VecDeque<for<'a> fn(&mut CPU, &'a mut (dyn Addressable + 'a))>,
 }
 
 // constructor
@@ -89,14 +90,12 @@ impl CPU {
             this_cycle(self, mem);
         }
         else {
-            // fetch and decode next instruction
-            self.bus.address = self.pc;
-            self.pc += 1;
-            let inst = Instruction::decode(self.fetch(mem));
+            let opcode = fetch_pc(self, mem);
+            let inst = Instruction::decode(opcode);
 
             match inst.op {
                 Operation::TAX => {
-                    self.m_op_queue.push_back(CPU::tax);
+                    self.m_op_queue.push_back(tax);
                 },
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
@@ -105,40 +104,8 @@ impl CPU {
     // TODO: Implement reset
 }
 
-// bus reads
-// TODO: Redo these, just byte the bullet and make them more micro-op specific
-impl CPU {
-    // assumes PC is moved to address bus explicitly at the start of instruction execution
-    fn fetch(&mut self, mem: &mut dyn Addressable) -> u8 {
-        self.bus.read(mem)
-    }
-    // read memory at address bus, increment address bus
-    fn fetch_low(&mut self, mem: &mut dyn Addressable) -> u8 {
-        let data = self.bus.read(mem);
-        self.bus.address += 1;
-        data
-    }
-    // fetch high byte from memory, assumes data bus contains low byte as last read. Sets Address bus.
-    fn fetch_high(&mut self, mem: &mut dyn Addressable) -> u8 {
-        let lo = self.bus.data;
-        let hi = self.bus.read(mem);
-        let address = ((hi as u16) << 8) | (lo as u16);
-        self.bus.address = address;
-        hi // hello!
-    }
-}
-
-// micro-ops (some of these are full 2-cycle instructions with the first cycle being the fetch-decode)
-// TODO(?): Move these to a seperate module, still deciding
-impl CPU {
-    // doesn't use memory, still needs it because all m-ops must have the same signature
-    fn tax(&mut self, _: &mut dyn Addressable) {
-        self.x = self.a;
-        self.p.update_nz(self.x);
-    }
-}
 
 pub(super) mod cpu_bus;
 pub(super) mod instruction;
-pub(super) mod ops;
+pub(super) mod cpu_ops;
 mod tests;
