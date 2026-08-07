@@ -51,6 +51,12 @@ impl CPU {
                 Operation::TAX => {
                     self.m_op_queue.push_back(tax);
                 },
+                Operation::ADC => {
+                    // hard code it as immediate for now
+                    self.bus.address = self.pc;
+                    self.pc += 1;
+                    self.m_op_queue.push_back(adc);
+                }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
         }

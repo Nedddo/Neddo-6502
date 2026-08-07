@@ -55,4 +55,16 @@ pub fn iny(cpu: &mut CPU, _: SysMem) {
     cpu.y += 1;
     cpu.p.update_nz(cpu.y);
 }
+// arithmetic
+pub fn adc(cpu: &mut CPU, mem: SysMem) {
+    // read operand
+    let operand_a = cpu.a;
+    let operand_b = cpu.bus.read(mem);
+    let (result, carry) = operand_a.carrying_add(operand_b, cpu.p.c);
+    cpu.a = result;
+    // update flags
+    cpu.p.update_nz(cpu.a);
+    cpu.p.c = carry;
+    cpu.p.v = (((result ^ operand_a) & (result ^ operand_b)) as i8) < 0; // will be negative if and only if sign change ocurs between both operands
+}
 
