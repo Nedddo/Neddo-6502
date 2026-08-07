@@ -4,7 +4,7 @@ pub(super) mod instruction;
 pub(super) mod cpu_ops;
 // imports
 use cpu_bus::Bus;
-use crate::memory::Addressable;
+use crate::{cpu::instruction::AddressingMode, memory::Addressable};
 use std::collections::VecDeque;
 use cpu_ops::*;
 
@@ -44,7 +44,8 @@ impl CPU {
             this_cycle(self, mem);
         }
         else {
-            let opcode = fetch_pc(self, mem);
+            fetch_pc(self, mem);
+            let opcode = self.bus.data;
             let inst = Instruction::decode(opcode);
 
             match inst.op {
@@ -52,9 +53,7 @@ impl CPU {
                     self.m_op_queue.push_back(tax);
                 },
                 Operation::ADC => {
-                    // hard code it as immediate for now
-                    self.bus.address = self.pc;
-                    self.pc += 1;
+                    self.queue_address_fetch(inst.mode);
                     self.m_op_queue.push_back(adc);
                 }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
@@ -62,6 +61,26 @@ impl CPU {
         }
     }
     // TODO: Implement reset
+}
+
+// private helpers
+impl CPU {
+    // functions will get their operand predictably based on their addressing mode
+    fn queue_address_fetch(&mut self, mode: AddressingMode) {
+        use instruction::AddressingMode::*;
+        match mode {
+            Immediate => { self.bus.address = self.pc; self.pc += 1} // address is already at the pc! just move it to the bus
+            Absolute => {self.m_op_queue.push_back(fetch_pc); self.m_op_queue.push_back(fetch_pc_high);}
+            ZeroPage => {self.m_op_queue.push_back(fetch_zpg);}
+            Indirect => {
+                self.m_op_queue.push_back(fetch_pc); 
+                self.m_op_queue.push_back(fetch_pc_high);
+                self.m_op_queue.push_back(fetch_indirect_low);
+                // high fetch is done DURING jmp instruction, which is the only instruction which uses this mode
+            }
+            _ => {/* do nothing for other addressing modes */}
+        }
+    }
 }
 
 mod tests; // cpu tests, declared here because it lookes nicer to me okaY!
