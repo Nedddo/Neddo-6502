@@ -1,58 +1,12 @@
-const F_N: u8     = 0b1000_0000;
-const F_V: u8     = 0b0100_0000;
-const F_FIXED: u8 = 0b0010_0000;
-const F_B: u8     = 0b0001_0000;
-const F_D: u8     = 0b0000_1000;
-const F_I: u8     = 0b0000_0100;
-const F_Z: u8     = 0b0000_0010;
-const F_C: u8     = 0b0000_0001;
-
+// submodudles
+pub(super) mod cpu_bus;
+pub(super) mod instruction;
+pub(super) mod cpu_ops;
+// imports
 use cpu_bus::Bus;
-
 use crate::memory::Addressable;
 use std::collections::VecDeque;
 use cpu_ops::*;
-
-#[derive(Default, Debug)]
-struct Flags {
-    // 8-bits encoding 7 flags, bit 5 is forced to 1
-    n: bool,
-    v: bool,
-    b: bool, // not a real flag as far as the cpu is concerned
-    d: bool,
-    i: bool,
-    z: bool,
-    c: bool,
-}
-
-impl Flags {
-    fn value(&self) -> u8 {
-        let mut val: u8 = F_FIXED; // bit 5 is always 1
-        if self.n { val |= F_N }
-        if self.v { val |= F_V }
-        if self.b { val |= F_B }
-        if self.d { val |= F_D }
-        if self.i { val |= F_I }
-        if self.z { val |= F_Z }
-        if self.c { val |= F_C }
-        val
-    }
-
-    fn set(&mut self, val: u8) {
-        self.n = (val & F_N) == F_N;
-        self.v = (val & F_V) == F_V;
-        self.b = (val & F_B) == F_B;
-        self.d = (val & F_D) == F_D;
-        self.i = (val & F_I) == F_I;
-        self.z = (val & F_Z) == F_Z;
-        self.c = (val & F_C) == F_C;
-    }
-    // used in loads and transfers
-    fn update_nz(&mut self, val: u8) {
-        self.z = val == 0;
-        self.n = (val & F_N) == F_N // negative = true if 7th bit is signed
-    }
-}
 
 pub struct CPU {
     pc: u16,
@@ -104,8 +58,57 @@ impl CPU {
     // TODO: Implement reset
 }
 
+mod tests; // cpu tests, declared here because it lookes nicer to me okaY!
 
-pub(super) mod cpu_bus;
-pub(super) mod instruction;
-pub(super) mod cpu_ops;
-mod tests;
+// allows me to represent p register as a set of booleans, which reflects its function in like 90% of cases.
+#[derive(Default, Debug)]
+struct Flags {
+    // 8-bits encoding 7 flags, bit 5 is forced to 1
+    n: bool,
+    v: bool,
+    b: bool, // not a real flag as far as the cpu is concerned
+    d: bool,
+    i: bool,
+    z: bool,
+    c: bool,
+}
+
+
+impl Flags {
+    // bitmasks!!!
+    const F_N: u8     = 0b1000_0000;
+    const F_V: u8     = 0b0100_0000;
+    const F_FIXED: u8 = 0b0010_0000;
+    const F_B: u8     = 0b0001_0000;
+    const F_D: u8     = 0b0000_1000;
+    const F_I: u8     = 0b0000_0100;
+    const F_Z: u8     = 0b0000_0010;
+    const F_C: u8     = 0b0000_0001;
+
+    fn value(&self) -> u8 {
+        let mut val: u8 = Self::F_FIXED; // bit 5 is always 1
+        if self.n { val |= Self::F_N }
+        if self.v { val |= Self::F_V }
+        if self.b { val |= Self::F_B }
+        if self.d { val |= Self::F_D }
+        if self.i { val |= Self::F_I }
+        if self.z { val |= Self::F_Z }
+        if self.c { val |= Self::F_C }
+        val
+    }
+
+    fn set(&mut self, val: u8) {
+        self.n = (val & Self::F_N) == Self::F_N;
+        self.v = (val & Self::F_V) == Self::F_V;
+        self.b = (val & Self::F_B) == Self::F_B;
+        self.d = (val & Self::F_D) == Self::F_D;
+        self.i = (val & Self::F_I) == Self::F_I;
+        self.z = (val & Self::F_Z) == Self::F_Z;
+        self.c = (val & Self::F_C) == Self::F_C;
+    }
+    // used in loads and transfers
+    fn update_nz(&mut self, val: u8) {
+        self.z = val == 0;
+        self.n = (val & Self::F_N) == Self::F_N // negative = true if 7th bit is signed
+    }
+}
