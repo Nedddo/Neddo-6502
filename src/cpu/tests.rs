@@ -34,6 +34,29 @@ mod cpu_memory_tests {
         assert_eq!(cpu.bus.address, 0xBEEF);
 
     }
+    // uses adc, validate this is functional in cpu_functionality_tests before running
+    #[test]
+    fn cpu_absolute_test() {
+        let mut mem = TestMemory::new();
+        // write adc immediate
+        mem.write(0, 0x6D);
+
+        mem.write(1, 0xEF);
+        mem.write(2, 0xBE);
+        mem.write(0xBEEF, 0x67);
+        let mut cpu = CPU::new();
+        // give register a some value
+        cpu.a = 0;
+
+        // should take 4 cycles
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+        cpu.cycle(&mut mem);
+
+        assert_eq!(cpu.a, 0x67);
+
+    }
 }
 #[cfg(test)] 
 mod cpu_functionality_tests {
