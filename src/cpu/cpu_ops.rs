@@ -13,11 +13,22 @@ pub fn fetch_pc(cpu: &mut CPU, mem: SysMem) {
 pub fn fetch_pc_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data;
     let hi = cpu.bus.read_at(cpu.pc, mem);
-    let address = ((hi as u16) << 8) | (lo as u16);
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
     cpu.pc += 1;
-    cpu.bus.address = address;
 }
-
+pub fn fetch_zpg(cpu: &mut CPU, mem: SysMem) { 
+    cpu.bus.address = cpu.bus.read_at(cpu.pc, mem) as u16;
+    cpu.pc += 1;
+}
+pub fn fetch_indirect_low(cpu: &mut CPU, mem: SysMem) { 
+    cpu.bus.read(mem);
+    cpu.bus.address += 1;
+}
+pub fn fetch_indirect_high(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read(mem);
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
+}
 /* ----- INSTRUCTION MICRO OPS ----- */
 
 // transfers
