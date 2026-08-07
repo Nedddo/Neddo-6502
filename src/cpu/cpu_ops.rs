@@ -46,4 +46,13 @@ pub fn txs(cpu: &mut CPU, _: SysMem) {
 pub fn tsx(cpu: &mut CPU, _: SysMem) {
     cpu.x = cpu.s;
 }
+// register increments
+pub fn inx(cpu: &mut CPU, _: SysMem) {
+    cpu.x += 1;
+    cpu.p.update_nz(cpu.x);
+}
+pub fn iny(cpu: &mut CPU, _: SysMem) {
+    cpu.y += 1;
+    cpu.p.update_nz(cpu.y);
+}
 
