@@ -136,7 +136,7 @@ pub fn fetch_absolute_x(cpu: &mut CPU, mem: SysMem) {
     let hi = cpu.bus.read_at(cpu.pc, mem);
     // calculate address
     let absolute_address = ((hi as u16) << 8) | (lo as u16);
-    let incremented_address = cpu.bus.address + cpu.x as u16;
+    let incremented_address = absolute_address + cpu.x as u16;
     // detect an overflow into high byte, if present add an additional cycle
     if (absolute_address ^ incremented_address) > 0xFF {
         // actual 6502 takes a cycle to correct the 16bit addition while performing a dummy read
@@ -150,7 +150,7 @@ pub fn fetch_absolute_y(cpu: &mut CPU, mem: SysMem) {
     let hi = cpu.bus.read_at(cpu.pc, mem);
     // calculate address
     let absolute_address = ((hi as u16) << 8) | (lo as u16);
-    let incremented_address = cpu.bus.address + cpu.y as u16;
+    let incremented_address = absolute_address + cpu.y as u16;
     // detect an overflow into high byte, if present add an additional cycle
     if (absolute_address ^ incremented_address) > 0xFF {
         // actual 6502 takes a cycle to correct the 16bit addition while performing a dummy read
