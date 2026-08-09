@@ -2,5 +2,11 @@
 name = "emulator"
 version = "0.1.0"
 edition = "2024"
+# overflows are pretty good for an emulator
+[profile.dev]
+overflow-checks = false
+
+[profile.release]
+overflow-checks = false
 
 [dependencies]
