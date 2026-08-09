@@ -173,12 +173,17 @@ mod address_modes_test {
         assert_eq!(cycles, 5);
         assert_eq!(cpu.bus.address, 0xBEEF);
     }
+    #[test]
     fn indirect_y_boundary_cross_test() {
         let (mut cpu, mut mem) = setup();
-        mem.write(0x8000, 0xB5);
-        mem.write(0x8001, 0xFF);
+        mem.write(0x8000, 0xB1);
+        mem.write(0x8001, 0x10);
+        // target address should be BEEE
+        mem.write(0x10, 0xFF);
+        mem.write(0x11, 0xBE);
         cpu.pc = 0x8000;
-        cpu.x = 0x68;
+        // BEFF + y = BF00
+        cpu.y = 0x01;
         // fetch
         cpu.cycle(&mut mem);
         let mut cycles = 1;
@@ -186,8 +191,118 @@ mod address_modes_test {
             cpu.cycle(&mut mem);
             cycles += 1;
         }
+        // page boundary cross should be 6 cycles
+        assert_eq!(cycles, 6);
+        assert_eq!(cpu.bus.address, 0xBF00);
+    }
+    #[test]
+    fn abs_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xAD);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        // target address should be BEEF
+        cpu.pc = 0x8000;
+
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        // count cycles
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // page boundary cross should be 6 cycles
         assert_eq!(cycles, 4);
-        assert_eq!(cpu.bus.address, 0x0067);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+    }
+    #[test]
+    fn abs_x_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xBD);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        // target address should be BEEF
+        cpu.pc = 0x8000;
+        cpu.x = 1;
+
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        // count cycles
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0xBEF0);
+    }
+    #[test]
+    fn abs_y_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB9);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        // target address should be BEEF
+        cpu.pc = 0x8000;
+        cpu.y = 1;
+
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        // count cycles
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0xBEF0);
+    }
+    #[test]
+    fn abs_x_overflow_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xBD);
+        mem.write(0x8001, 0xFF);
+        mem.write(0x8002, 0xBE);
+        // target address should be BEEF
+        cpu.pc = 0x8000;
+        cpu.x = 1;
+
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        // count cycles
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // page boundary cross should be 5 cycles
+        assert_eq!(cycles, 5);
+        assert_eq!(cpu.bus.address, 0xBF00);
+    }
+    #[test]
+    fn abs_y_overflow_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB9);
+        mem.write(0x8001, 0xFF);
+        mem.write(0x8002, 0xBE);
+        // target address should be BEEF
+        cpu.pc = 0x8000;
+        cpu.y = 1;
+
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        // count cycles
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // page boundary cross should be 5 cycles
+        assert_eq!(cycles, 5);
+        assert_eq!(cpu.bus.address, 0xBF00);
     }
 }
 
