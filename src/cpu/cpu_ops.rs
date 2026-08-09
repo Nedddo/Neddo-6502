@@ -199,6 +199,24 @@ pub fn fetch_indirect_high(cpu: &mut CPU, mem: SysMem) {
     let hi = cpu.bus.read(mem);
     cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
 }
+pub fn fetch_indirect_high_y(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read(mem);
+    let absolute_address = ((hi as u16) << 8) | (lo as u16);
+    let incremented_address = absolute_address + cpu.y as u16;
+    // detect an overflow into high byte, if present add an additional cycle
+    if (absolute_address ^ incremented_address) > 0xFF {
+        // actual 6502 takes a cycle to correct the 16bit addition while performing a dummy read
+        cpu.m_op_queue.push_front(dummy_access);
+    }
+    cpu.bus.address = incremented_address;
+}
+pub fn fetch_indirect_high_y_fixed(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read(mem);
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.y as u16;
+    cpu.m_op_queue.push_front(dummy_access);
+}
 pub fn dummy_access(_: &mut CPU, _: SysMem) {
     // its the same as no-op, but i wanted to distinguish this from the instruction
     // worth noting, the actual 6502 as the function name suggests, does a dummy memory access. No point emulating this, its just extra complexity.
