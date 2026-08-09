@@ -56,6 +56,10 @@ impl CPU {
                     self.queue_address_fetch(inst.mode);
                     self.m_op_queue.push_back(adc);
                 }
+                Operation::LDA => {
+                    self.queue_address_fetch(inst.mode);
+                    self.m_op_queue.push_back(lda);
+                }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
         }
@@ -69,17 +73,39 @@ impl CPU {
     fn queue_address_fetch(&mut self, mode: AddressingMode) {
         use instruction::AddressingMode::*;
         match mode {
-            Immediate => { self.bus.address = self.pc; self.pc += 1} // address is already at the pc! just move it to the bus
-            Absolute => {self.m_op_queue.push_back(fetch_immediate); self.m_op_queue.push_back(fetch_absolute_high);}
-            ZeroPage => {self.m_op_queue.push_back(fetch_zpg);}
-            ZeroPageX => {self.m_op_queue.push_back(fetch_zpg); self.m_op_queue.push_back(inc_zpg_x);}
-            ZeroPageY => {self.m_op_queue.push_back(fetch_zpg); self.m_op_queue.push_back(inc_zpg_y);}
+            Immediate | Relative => { self.bus.address = self.pc; self.pc += 1} // address is already at the pc! just move it to the bus
+            Absolute => {
+                self.m_op_queue.push_back(fetch_immediate);
+                self.m_op_queue.push_back(fetch_absolute_high);
+            }
+            AbsoluteX => {
+                self.m_op_queue.push_back(fetch_immediate);
+                self.m_op_queue.push_back(fetch_absolute_x);
+            }
+            AbsoluteY => {
+                self.m_op_queue.push_back(fetch_immediate);
+                self.m_op_queue.push_back(fetch_absolute_y);
+            }
+            ZeroPage => { self.m_op_queue.push_back(fetch_zpg); }
+            ZeroPageX => {
+                self.m_op_queue.push_back(fetch_zpg); 
+                self.m_op_queue.push_back(inc_zpg_x);
+            }
+            ZeroPageY => {
+                self.m_op_queue.push_back(fetch_zpg);
+                self.m_op_queue.push_back(inc_zpg_y);
+            }
             IndirectX => {
                 // fetch address at zero page + x
                 self.m_op_queue.push_back(fetch_zpg);
                 self.m_op_queue.push_back(inc_zpg_x);
                 self.m_op_queue.push_back(fetch_indirect_low);
                 self.m_op_queue.push_back(fetch_indirect_high);
+            }
+            IndirectY => {
+                self.m_op_queue.push_back(fetch_zpg);
+                self.m_op_queue.push_back(fetch_indirect_low);
+                self.m_op_queue.push_back(fetch_indirect_high_y);
             }
             Indirect => {
                 self.m_op_queue.push_back(fetch_immediate); 
