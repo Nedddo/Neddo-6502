@@ -59,6 +59,139 @@ mod cpu_memory_tests {
     }
 }
 #[cfg(test)] 
+mod address_modes_test {
+    use super::*;
+
+    fn setup() -> (CPU, TestMemory) {
+        let cpu = CPU::new();
+        let mem = TestMemory::new();
+        (cpu, mem)
+    }
+    // uses lda to test cycle variance, when implemented will use sta to test cycle invariance with writes
+    #[test]
+    fn immediate_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xA9);
+        cpu.pc = 0x8000;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 2);
+    }
+    #[test]
+    fn zpg_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xA5);
+        mem.write(0x8001, 0x67);
+        cpu.pc = 0x8000;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 3);
+        assert_eq!(cpu.bus.address, 0x0067);
+    }
+    // lda does not support zpg, y but its the same so doesnt need testing really
+    #[test]
+    fn zpg_x_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB5);
+        mem.write(0x8001, 0x67);
+        cpu.pc = 0x8000;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0x0067);
+    }
+    #[test]
+    fn zpg_x_overflow_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB5);
+        mem.write(0x8001, 0xFF);
+        cpu.pc = 0x8000;
+        cpu.x = 0x68;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0x0067);
+    }
+    #[test]
+    fn indirect_x_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xA1);
+        mem.write(0x8001, 0x10);
+        // target address should be BEEF
+        mem.write(0x15, 0xEF);
+        mem.write(0x16, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.x = 0x05;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 6);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+    }
+    #[test]
+    fn indirect_y_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB1);
+        mem.write(0x8001, 0x10);
+        // target address should be BEEE
+        mem.write(0x10, 0xEE);
+        mem.write(0x11, 0xBE);
+        cpu.pc = 0x8000;
+        // BEEE + y = BEEF
+        cpu.y = 0x01;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 5);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+    }
+    fn indirect_y_boundary_cross_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0xB5);
+        mem.write(0x8001, 0xFF);
+        cpu.pc = 0x8000;
+        cpu.x = 0x68;
+        // fetch
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0x0067);
+    }
+}
+
+#[cfg(test)] 
 mod cpu_functionality_tests {
     use super::*;
     #[test]
