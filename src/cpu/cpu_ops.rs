@@ -2,33 +2,6 @@ use super::*;
 
 type SysMem<'a> = &'a mut dyn Addressable;
 
-/* ----- MEMORY MICRO OPS ----- */
-
-// fetch from memory at PC and increment PC
-pub fn fetch_pc(cpu: &mut CPU, mem: SysMem) { 
-    cpu.bus.read_at(cpu.pc, mem);
-    cpu.pc += 1;
-}
-// same as fetch but sets address bus. last read vale = AA, reads BB, address bus = BBAA -> BB
-pub fn fetch_pc_high(cpu: &mut CPU, mem: SysMem) { 
-    let lo = cpu.bus.data;
-    let hi = cpu.bus.read_at(cpu.pc, mem);
-    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
-    cpu.pc += 1;
-}
-pub fn fetch_zpg(cpu: &mut CPU, mem: SysMem) { 
-    cpu.bus.address = cpu.bus.read_at(cpu.pc, mem) as u16;
-    cpu.pc += 1;
-}
-pub fn fetch_indirect_low(cpu: &mut CPU, mem: SysMem) { 
-    cpu.bus.read(mem);
-    cpu.bus.address += 1;
-}
-pub fn fetch_indirect_high(cpu: &mut CPU, mem: SysMem) { 
-    let lo = cpu.bus.data;
-    let hi = cpu.bus.read(mem);
-    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
-}
 /* ----- INSTRUCTION MICRO OPS ----- */
 
 pub fn nop(_: &mut CPU, _: SysMem) {
@@ -114,7 +87,123 @@ pub fn adc(cpu: &mut CPU, mem: SysMem) {
 pub fn and(cpu: &mut CPU, mem: SysMem) {
     let operand = cpu.bus.read(mem);
     cpu.a &= operand;
-    cpu.p.update_nz(operand);
+    cpu.p.update_nz(cpu.a);
+}
+pub fn ora(cpu: &mut CPU, mem: SysMem) {
+    let operand = cpu.bus.read(mem);
+    cpu.a |= operand;
+    cpu.p.update_nz(cpu.a);
+}
+pub fn eor(cpu: &mut CPU, mem: SysMem) {
+    let operand = cpu.bus.read(mem);
+    cpu.a ^= operand;
+    cpu.p.update_nz(cpu.a);
+}
+// memory!!
+pub fn lda(cpu: &mut CPU, mem: SysMem) {
+    let data = cpu.bus.read(mem);
+    cpu.a = data;
+    cpu.p.update_nz(cpu.a);
+}
+pub fn ldx(cpu: &mut CPU, mem: SysMem) {
+    let data = cpu.bus.read(mem);
+    cpu.x = data;
+    cpu.p.update_nz(cpu.x);
+}
+pub fn ldy(cpu: &mut CPU, mem: SysMem) {
+    let data = cpu.bus.read(mem);
+    cpu.y = data;
+    cpu.p.update_nz(cpu.y);
 }
 
+/* ----- MEMORY MICRO OPS ----- */
 
+// fetch from memory at PC and increment PC - used for immediate as well as first byte of absolute
+pub fn fetch_immediate(cpu: &mut CPU, mem: SysMem) { 
+    cpu.bus.read_at(cpu.pc, mem);
+    cpu.pc += 1;
+}
+// same as fetch but sets address bus. last read vale = AA, reads BB, address bus = BBAA -> BB
+pub fn fetch_absolute_high(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read_at(cpu.pc, mem);
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
+    cpu.pc += 1;
+}
+// memory increments need read and write versions. readonly can speculatively read the wrong address and finish early if it happens to be correct. write instructions cant take the same risk.
+pub fn fetch_absolute_x(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read_at(cpu.pc, mem);
+    // calculate address
+    let absolute_address = ((hi as u16) << 8) | (lo as u16);
+    let incremented_address = cpu.bus.address + cpu.x as u16;
+    // detect an overflow into high byte, if present add an additional cycle
+    if (absolute_address ^ incremented_address) > 0xFF {
+        // actual 6502 takes a cycle to correct the 16bit addition while performing a dummy read
+        cpu.m_op_queue.push_front(dummy_access);
+    }
+    cpu.bus.address = incremented_address;
+    cpu.pc += 1;
+}
+pub fn fetch_absolute_y(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read_at(cpu.pc, mem);
+    // calculate address
+    let absolute_address = ((hi as u16) << 8) | (lo as u16);
+    let incremented_address = cpu.bus.address + cpu.y as u16;
+    // detect an overflow into high byte, if present add an additional cycle
+    if (absolute_address ^ incremented_address) > 0xFF {
+        // actual 6502 takes a cycle to correct the 16bit addition while performing a dummy read
+        cpu.m_op_queue.push_front(dummy_access);
+    }
+    cpu.bus.address = incremented_address;
+    cpu.pc += 1;
+}
+// fixed refers to cycle counts, used in writes
+pub fn fetch_absolute_x_fixed(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read_at(cpu.pc, mem);
+    // calculate address
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.x as u16;
+    cpu.m_op_queue.push_front(dummy_access);
+    cpu.pc += 1;
+}
+pub fn fetch_absolute_y_fixed(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read_at(cpu.pc, mem);
+    // calculate address
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.y as u16;
+    cpu.m_op_queue.push_front(dummy_access);
+    cpu.pc += 1;
+}
+// zero page adressing
+pub fn fetch_zpg(cpu: &mut CPU, mem: SysMem) { 
+    cpu.bus.address = cpu.bus.read_at(cpu.pc, mem) as u16;
+    cpu.pc += 1;
+}
+pub fn inc_zpg_x(cpu: &mut CPU, _: SysMem) {
+    let target = cpu.bus.address as u8 + cpu.x;
+    cpu.bus.address = target as u16;
+}
+pub fn inc_zpg_y(cpu: &mut CPU, _: SysMem) {
+    let target = cpu.bus.address as u8 + cpu.y;
+    cpu.bus.address = target as u16;
+}
+// indirect addressing
+pub fn fetch_indirect_low(cpu: &mut CPU, mem: SysMem) { 
+    cpu.bus.read(mem);
+    cpu.bus.address += 1;
+}
+pub fn fetch_indirect_high(cpu: &mut CPU, mem: SysMem) { 
+    let lo = cpu.bus.data;
+    let hi = cpu.bus.read(mem);
+    cpu.bus.address = ((hi as u16) << 8) | (lo as u16);
+}
+pub fn dummy_access(_: &mut CPU, _: SysMem) {
+    // its the same as no-op, but i wanted to distinguish this from the instruction
+    // worth noting, the actual 6502 as the function name suggests, does a dummy memory access. No point emulating this, its just extra complexity.
+}
+// this is for instructions that take an extra cycle to write result back to memory
+pub fn write_back(cpu: &mut CPU, mem: SysMem) {
+    cpu.bus.write(mem);
+}
