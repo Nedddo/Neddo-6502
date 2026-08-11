@@ -24,8 +24,8 @@ pub enum AddressingMode {
     AbsoluteX {dynamic_cycles: bool},
     AbsoluteY {dynamic_cycles: bool},
     Indirect,
-    IndirectX {dynamic_cycles: bool}, // (indirect,X)
-    IndirectY, // (indirect),Y
+    IndirectX, // (indirect,X)
+    IndirectY {dynamic_cycles: bool}, // (indirect),Y
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,7 +40,7 @@ impl Instruction {
 
         let (op, mode) = match opcode {
             0x00 => (BRK, Implied),
-            0x01 => (ORA, IndirectX {dynamic_cycles: true}),
+            0x01 => (ORA, IndirectX),
             0x05 => (ORA, ZeroPage),
             0x06 => (ASL, ZeroPage),
             0x08 => (PHP, Implied),
@@ -50,7 +50,7 @@ impl Instruction {
             0x0E => (ASL, Absolute),
 
             0x10 => (BPL, Relative),
-            0x11 => (ORA, IndirectY),
+            0x11 => (ORA, IndirectY {dynamic_cycles: true}),
             0x15 => (ORA, ZeroPageX),
             0x16 => (ASL, ZeroPageX),
             0x18 => (CLC, Implied),
@@ -59,7 +59,7 @@ impl Instruction {
             0x1E => (ASL, AbsoluteX {dynamic_cycles: false}),
 
             0x20 => (JSR, Absolute),
-            0x21 => (AND, IndirectX {dynamic_cycles: true}),
+            0x21 => (AND, IndirectX),
             0x24 => (BIT, ZeroPage),
             0x25 => (AND, ZeroPage),
             0x26 => (ROL, ZeroPage),
@@ -71,7 +71,7 @@ impl Instruction {
             0x2E => (ROL, Absolute),
 
             0x30 => (BMI, Relative),
-            0x31 => (AND, IndirectY),
+            0x31 => (AND, IndirectY {dynamic_cycles: true}),
             0x35 => (AND, ZeroPageX),
             0x36 => (ROL, ZeroPageX),
             0x38 => (SEC, Implied),
@@ -80,7 +80,7 @@ impl Instruction {
             0x3E => (ROL, AbsoluteX {dynamic_cycles: false}),
 
             0x40 => (RTI, Implied),
-            0x41 => (EOR, IndirectX {dynamic_cycles: true}),
+            0x41 => (EOR, IndirectX),
             0x45 => (EOR, ZeroPage),
             0x46 => (LSR, ZeroPage),
             0x48 => (PHA, Implied),
@@ -91,7 +91,7 @@ impl Instruction {
             0x4E => (LSR, Absolute),
 
             0x50 => (BVC, Relative),
-            0x51 => (EOR, IndirectY),
+            0x51 => (EOR, IndirectY {dynamic_cycles: true}),
             0x55 => (EOR, ZeroPageX),
             0x56 => (LSR, ZeroPageX),
             0x58 => (CLI, Implied),
@@ -100,7 +100,7 @@ impl Instruction {
             0x5E => (LSR, AbsoluteX {dynamic_cycles: false}),
 
             0x60 => (RTS, Implied),
-            0x61 => (ADC, IndirectX {dynamic_cycles: true}),
+            0x61 => (ADC, IndirectX),
             0x65 => (ADC, ZeroPage),
             0x66 => (ROR, ZeroPage),
             0x68 => (PLA, Implied),
@@ -111,7 +111,7 @@ impl Instruction {
             0x6E => (ROR, Absolute),
 
             0x70 => (BVS, Relative),
-            0x71 => (ADC, IndirectY),
+            0x71 => (ADC, IndirectY {dynamic_cycles: true}),
             0x75 => (ADC, ZeroPageX),
             0x76 => (ROR, ZeroPageX),
             0x78 => (SEI, Implied),
@@ -119,7 +119,7 @@ impl Instruction {
             0x7D => (ADC, AbsoluteX {dynamic_cycles: true}),
             0x7E => (ROR, AbsoluteX {dynamic_cycles: false}),
 
-            0x81 => (STA, IndirectX {dynamic_cycles: false}),
+            0x81 => (STA, IndirectX),
             0x84 => (STY, ZeroPage),
             0x85 => (STA, ZeroPage),
             0x86 => (STX, ZeroPage),
@@ -130,7 +130,7 @@ impl Instruction {
             0x8E => (STX, Absolute),
 
             0x90 => (BCC, Relative),
-            0x91 => (STA, IndirectY),
+            0x91 => (STA, IndirectY {dynamic_cycles: false}),
             0x94 => (STY, ZeroPageX),
             0x95 => (STA, ZeroPageX),
             0x96 => (STX, ZeroPageY),
@@ -140,7 +140,7 @@ impl Instruction {
             0x9D => (STA, AbsoluteX {dynamic_cycles: false}),
 
             0xA0 => (LDY, Immediate),
-            0xA1 => (LDA, IndirectX {dynamic_cycles: true}),
+            0xA1 => (LDA, IndirectX),
             0xA2 => (LDX, Immediate),
             0xA4 => (LDY, ZeroPage),
             0xA5 => (LDA, ZeroPage),
@@ -153,7 +153,7 @@ impl Instruction {
             0xAE => (LDX, Absolute),
 
             0xB0 => (BCS, Relative),
-            0xB1 => (LDA, IndirectY),
+            0xB1 => (LDA, IndirectY {dynamic_cycles: true}),
             0xB4 => (LDY, ZeroPageX),
             0xB5 => (LDA, ZeroPageX),
             0xB6 => (LDX, ZeroPageY),
@@ -165,7 +165,7 @@ impl Instruction {
             0xBE => (LDX, AbsoluteY {dynamic_cycles: true}),
 
             0xC0 => (CPY, Immediate),
-            0xC1 => (CMP, IndirectX {dynamic_cycles: true}),
+            0xC1 => (CMP, IndirectX),
             0xC4 => (CPY, ZeroPage),
             0xC5 => (CMP, ZeroPage),
             0xC6 => (DEC, ZeroPage),
@@ -177,7 +177,7 @@ impl Instruction {
             0xCE => (DEC, Absolute),
 
             0xD0 => (BNE, Relative),
-            0xD1 => (CMP, IndirectY),
+            0xD1 => (CMP, IndirectY {dynamic_cycles: true}),
             0xD5 => (CMP, ZeroPageX),
             0xD6 => (DEC, ZeroPageX),
             0xD8 => (CLD, Implied),
@@ -186,7 +186,7 @@ impl Instruction {
             0xDE => (DEC, AbsoluteX {dynamic_cycles: false}),
 
             0xE0 => (CPX, Immediate),
-            0xE1 => (SBC, IndirectX {dynamic_cycles: true}),
+            0xE1 => (SBC, IndirectX),
             0xE4 => (CPX, ZeroPage),
             0xE5 => (SBC, ZeroPage),
             0xE6 => (INC, ZeroPage),
@@ -198,7 +198,7 @@ impl Instruction {
             0xEE => (INC, Absolute),
 
             0xF0 => (BEQ, Relative),
-            0xF1 => (SBC, IndirectY),
+            0xF1 => (SBC, IndirectY {dynamic_cycles: true}),
             0xF5 => (SBC, ZeroPageX),
             0xF6 => (INC, ZeroPageX),
             0xF8 => (SED, Implied),
