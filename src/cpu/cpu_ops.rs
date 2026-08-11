@@ -127,6 +127,18 @@ pub fn sty (cpu: &mut CPU, mem: SysMem) {
 // read modify execute
 pub fn inc(cpu: &mut CPU, _: SysMem) {
     cpu.bus.data += 1;
+    cpu.p.update_nz(cpu.bus.data);
+}
+pub fn asl(cpu: &mut CPU, _: SysMem) {
+    // check if bit 7 is shifted out
+    if (cpu.bus.data & 0x80 )!= 0 { cpu.p.c = true }
+    cpu.bus.data <<= 1;
+    cpu.p.update_nz(cpu.bus.data);
+}
+pub fn asl_a(cpu: &mut CPU, _: SysMem) {
+    if (cpu.a & 0x80 )!= 0 { cpu.p.c = true }
+    cpu.a <<= 1;
+    cpu.p.update_nz(cpu.a);
 }
 
 /* ----- MEMORY MICRO OPS ----- */

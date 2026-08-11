@@ -4,7 +4,7 @@ pub(super) mod instruction;
 pub(super) mod cpu_ops;
 // imports
 use cpu_bus::Bus;
-use crate::{cpu::instruction::AddressingMode, memory::Addressable};
+use crate::{cpu::instruction::AddressingMode::{self, Accumulator}, memory::Addressable};
 use std::collections::VecDeque;
 use cpu_ops::*;
 
@@ -52,11 +52,26 @@ impl CPU {
             self.queue_address_fetch(inst.mode);
 
             match inst.op {
-                Operation::TAX => {
-                    self.queue(tax);
-                },
                 Operation::ADC => {
                     self.queue(adc);
+                }
+                Operation::AND => {
+                    self.queue(and);
+                }
+                Operation::ASL => {
+                    if inst.mode == Accumulator { 
+                        // accumulator mode is a bit of an edge case
+                        self.queue(asl_a);
+                    } 
+                    else {
+                        self.queue(asl);
+                    }
+                }
+                Operation::INC => {
+                    // read-modify-execute
+                    self.queue(read_operand);
+                    self.queue(inc);
+                    self.queue(write_back)
                 }
                 Operation::LDA => {
                     self.queue(lda);
@@ -64,11 +79,8 @@ impl CPU {
                 Operation::STA => {
                     self.queue(sta);
                 }
-                Operation::INC => {
-                    // read-modify-execute
-                    self.queue(read_operand);
-                    self.queue(inc);
-                    self.queue(write_back)
+                Operation::TAX => {
+                    self.queue(tax);
                 }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
