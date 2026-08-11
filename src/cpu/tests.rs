@@ -59,7 +59,7 @@ mod cpu_memory_tests {
     }
 }
 #[cfg(test)] 
-mod address_modes_test {
+mod address_modes_dynamic_test {
     use super::*;
 
     fn setup() -> (CPU, TestMemory) {
@@ -303,6 +303,128 @@ mod address_modes_test {
         // page boundary cross should be 5 cycles
         assert_eq!(cycles, 5);
         assert_eq!(cpu.bus.address, 0xBF00);
+    }
+}
+
+mod address_modes_fixed_test {
+    use super::*;
+
+    fn setup() -> (CPU, TestMemory) {
+        let cpu = CPU::new();
+        let mem = TestMemory::new();
+        (cpu, mem)
+    }
+
+    #[test]
+    fn zpg_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x85);
+        mem.write(0x8001, 0x67);
+        cpu.pc = 0x8000;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 3);
+        assert_eq!(cpu.bus.address, 0x0067);
+    }
+
+    #[test]
+    fn abs_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x8D);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+    }
+
+    #[test]
+    fn indirect_x_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x81);
+        mem.write(0x8001, 0x10);
+        mem.write(0x15, 0xEF);
+        mem.write(0x16, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.x = 0x05;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        assert_eq!(cycles, 6);
+        assert_eq!(cpu.bus.address, 0xBEEF);
+    }
+
+    // no page cross, but STA must still take the "slow" count -- this is
+    // the fixed-cost vs early-exit distinction under test
+    #[test]
+    fn abs_x_no_cross_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x9D);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.x = 1;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // LDA would take 4 here; STA must still take 5
+        assert_eq!(cycles, 5);
+        assert_eq!(cpu.bus.address, 0xBEF0);
+    }
+
+    #[test]
+    fn abs_y_no_cross_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x99);
+        mem.write(0x8001, 0xEF);
+        mem.write(0x8002, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.y = 1;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // LDA would take 4 here; STA must still take 5
+        assert_eq!(cycles, 5);
+        assert_eq!(cpu.bus.address, 0xBEF0);
+    }
+
+    #[test]
+    fn indirect_y_no_cross_test() {
+        let (mut cpu, mut mem) = setup();
+        mem.write(0x8000, 0x91);
+        mem.write(0x8001, 0x10);
+        mem.write(0x10, 0xEE);
+        mem.write(0x11, 0xBE);
+        cpu.pc = 0x8000;
+        cpu.y = 0x01;
+        cpu.cycle(&mut mem);
+        let mut cycles = 1;
+        while !cpu.m_op_queue.is_empty() {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+        }
+        // LDA would take 5 here; STA must still take 6
+        assert_eq!(cycles, 6);
+        assert_eq!(cpu.bus.address, 0xBEEF);
     }
 }
 
