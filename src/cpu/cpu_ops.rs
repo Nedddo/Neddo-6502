@@ -122,8 +122,6 @@ pub fn cmp(cpu: &mut CPU, mem: SysMem) {
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
     cpu.p.c = !(operand_a < operand_b);
-    // signed overflow can only occur if a and b have different signage
-    cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
 pub fn cpx(cpu: &mut CPU, mem: SysMem) {
     let operand_a = cpu.x;
@@ -134,9 +132,8 @@ pub fn cpx(cpu: &mut CPU, mem: SysMem) {
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
     cpu.p.c = !(operand_a < operand_b);
-    // signed overflow can only occur if a and b have different signage
-    cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
+
 pub fn cpy(cpu: &mut CPU, mem: SysMem) {
     let operand_a = cpu.y;
     let operand_b = cpu.bus.read(mem);
@@ -146,8 +143,6 @@ pub fn cpy(cpu: &mut CPU, mem: SysMem) {
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
     cpu.p.c = !(operand_a < operand_b);
-    // signed overflow can only occur if a and b have different signage
-    cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
 pub fn bit(cpu: &mut CPU, mem: SysMem) {
     let operand = cpu.bus.read(mem);
