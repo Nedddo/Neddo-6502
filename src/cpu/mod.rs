@@ -60,6 +60,10 @@ impl CPU {
                     self.queue_address_fetch(inst.mode);
                     self.m_op_queue.push_back(lda);
                 }
+                Operation::STA => {
+                    self.queue_address_fetch(inst.mode);
+                    self.m_op_queue.push_back(sta);
+                }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
         }
@@ -78,13 +82,15 @@ impl CPU {
                 self.m_op_queue.push_back(fetch_immediate);
                 self.m_op_queue.push_back(fetch_absolute_high);
             }
-            AbsoluteX => {
+            AbsoluteX {dynamic_cycles} => {
                 self.m_op_queue.push_back(fetch_immediate);
-                self.m_op_queue.push_back(fetch_absolute_x);
+                let high_fetch = if dynamic_cycles {fetch_absolute_x} else {fetch_absolute_x_fixed};
+                self.m_op_queue.push_back(high_fetch);
             }
-            AbsoluteY => {
+            AbsoluteY {dynamic_cycles} => {
                 self.m_op_queue.push_back(fetch_immediate);
-                self.m_op_queue.push_back(fetch_absolute_y);
+                let high_fetch = if dynamic_cycles {fetch_absolute_y} else {fetch_absolute_y_fixed};
+                self.m_op_queue.push_back(high_fetch);
             }
             ZeroPage => { self.m_op_queue.push_back(fetch_zpg); }
             ZeroPageX => {
@@ -102,10 +108,11 @@ impl CPU {
                 self.m_op_queue.push_back(fetch_indirect_low);
                 self.m_op_queue.push_back(fetch_indirect_high);
             }
-            IndirectY => {
+            IndirectY {dynamic_cycles} => {
                 self.m_op_queue.push_back(fetch_zpg);
                 self.m_op_queue.push_back(fetch_indirect_low);
-                self.m_op_queue.push_back(fetch_indirect_high_y);
+                let high_fetch = if dynamic_cycles {fetch_indirect_high_y} else {fetch_indirect_high_y_fixed};
+                self.m_op_queue.push_back(high_fetch);
             }
             Indirect => {
                 self.m_op_queue.push_back(fetch_immediate); 
