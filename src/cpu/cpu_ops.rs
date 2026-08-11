@@ -115,6 +115,15 @@ pub fn ldy(cpu: &mut CPU, mem: SysMem) {
     cpu.y = data;
     cpu.p.update_nz(cpu.y);
 }
+pub fn sta (cpu: &mut CPU, mem: SysMem) {
+    cpu.bus.write_value(cpu.a, mem);
+}
+pub fn stx (cpu: &mut CPU, mem: SysMem) {
+    cpu.bus.write_value(cpu.x, mem);
+}
+pub fn sty (cpu: &mut CPU, mem: SysMem) {
+    cpu.bus.write_value(cpu.y, mem);
+}
 
 /* ----- MEMORY MICRO OPS ----- */
 
