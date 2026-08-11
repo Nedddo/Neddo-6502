@@ -390,9 +390,9 @@ pub fn pull_pc_low (cpu: &mut CPU, mem: SysMem) {
     pull(cpu, mem);
 }
 pub fn pull_pc_high (cpu: &mut CPU, mem: SysMem) {
-    let lo = cpu.bus.address; 
-    let hi = pull(cpu, mem);
-    cpu.bus.address = ((hi as u16) << 8 ) | (lo);
+    let lo = cpu.bus.data as u16; 
+    let hi = pull(cpu, mem) as u16;
+    cpu.bus.address = ( hi << 8 ) | (lo);
 }
 // helper for push instructions
 fn push(cpu: &mut CPU, mem: SysMem, data: u8) {
