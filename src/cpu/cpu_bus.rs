@@ -37,4 +37,8 @@ impl Bus {
         self.data = val;
         self.write(memory);
     }
+    pub fn write_value(&mut self, val: u8, memory: &mut dyn Addressable) {
+        self.data = val;
+        self.write(memory);
+    }
 }
