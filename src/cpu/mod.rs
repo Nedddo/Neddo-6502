@@ -48,21 +48,21 @@ impl CPU {
             let opcode = self.bus.data;
             let inst = Instruction::decode(opcode);
 
+            // fetch target address for this instruction (or do nothing for impl)
+            self.queue_address_fetch(inst.mode);
+
             match inst.op {
                 Operation::TAX => {
-                    self.m_op_queue.push_back(tax);
+                    self.queue(tax);
                 },
                 Operation::ADC => {
-                    self.queue_address_fetch(inst.mode);
-                    self.m_op_queue.push_back(adc);
+                    self.queue(adc);
                 }
                 Operation::LDA => {
-                    self.queue_address_fetch(inst.mode);
-                    self.m_op_queue.push_back(lda);
+                    self.queue(lda);
                 }
                 Operation::STA => {
-                    self.queue_address_fetch(inst.mode);
-                    self.m_op_queue.push_back(sta);
+                    self.queue(sta);
                 }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
@@ -73,51 +73,55 @@ impl CPU {
 
 // private helpers
 impl CPU {
+    // legit just because the syntax was annoying to me
+    fn queue(&mut self, m_op: fn(&mut CPU, &mut dyn Addressable) ) {
+        self.m_op_queue.push_back(m_op);
+    }
     // functions will get their operand predictably based on their addressing mode
     fn queue_address_fetch(&mut self, mode: AddressingMode) {
         use instruction::AddressingMode::*;
         match mode {
             Immediate | Relative => { self.bus.address = self.pc; self.pc += 1} // address is already at the pc! just move it to the bus
             Absolute => {
-                self.m_op_queue.push_back(fetch_immediate);
-                self.m_op_queue.push_back(fetch_absolute_high);
+                self.queue(fetch_immediate);
+                self.queue(fetch_absolute_high);
             }
             AbsoluteX {dynamic_cycles} => {
-                self.m_op_queue.push_back(fetch_immediate);
+                self.queue(fetch_immediate);
                 let high_fetch = if dynamic_cycles {fetch_absolute_x} else {fetch_absolute_x_fixed};
-                self.m_op_queue.push_back(high_fetch);
+                self.queue(high_fetch);
             }
             AbsoluteY {dynamic_cycles} => {
-                self.m_op_queue.push_back(fetch_immediate);
+                self.queue(fetch_immediate);
                 let high_fetch = if dynamic_cycles {fetch_absolute_y} else {fetch_absolute_y_fixed};
-                self.m_op_queue.push_back(high_fetch);
+                self.queue(high_fetch);
             }
-            ZeroPage => { self.m_op_queue.push_back(fetch_zpg); }
+            ZeroPage => { self.queue(fetch_zpg); }
             ZeroPageX => {
-                self.m_op_queue.push_back(fetch_zpg); 
-                self.m_op_queue.push_back(inc_zpg_x);
+                self.queue(fetch_zpg); 
+                self.queue(inc_zpg_x);
             }
             ZeroPageY => {
-                self.m_op_queue.push_back(fetch_zpg);
-                self.m_op_queue.push_back(inc_zpg_y);
+                self.queue(fetch_zpg);
+                self.queue(inc_zpg_y);
             }
             IndirectX => {
                 // fetch address at zero page + x
-                self.m_op_queue.push_back(fetch_zpg);
-                self.m_op_queue.push_back(inc_zpg_x);
-                self.m_op_queue.push_back(fetch_indirect_low);
-                self.m_op_queue.push_back(fetch_indirect_high);
+                self.queue(fetch_zpg);
+                self.queue(inc_zpg_x);
+                self.queue(fetch_indirect_low);
+                self.queue(fetch_indirect_high);
             }
             IndirectY {dynamic_cycles} => {
-                self.m_op_queue.push_back(fetch_zpg);
-                self.m_op_queue.push_back(fetch_indirect_low);
+                self.queue(fetch_zpg);
+                self.queue(fetch_indirect_low);
                 let high_fetch = if dynamic_cycles {fetch_indirect_high_y} else {fetch_indirect_high_y_fixed};
-                self.m_op_queue.push_back(high_fetch);
+                self.queue(high_fetch);
             }
             Indirect => {
-                self.m_op_queue.push_back(fetch_immediate); 
-                self.m_op_queue.push_back(fetch_absolute_high);
-                self.m_op_queue.push_back(fetch_indirect_low);
+                self.queue(fetch_immediate); 
+                self.queue(fetch_absolute_high);
+                self.queue(fetch_indirect_low);
                 // high fetch is done DURING jmp instruction, which is the only instruction which uses this mode
             }
             _ => {/* do nothing for other addressing modes */}
