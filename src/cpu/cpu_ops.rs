@@ -116,39 +116,36 @@ pub fn eor(cpu: &mut CPU, mem: SysMem) {
 pub fn cmp(cpu: &mut CPU, mem: SysMem) {
     let operand_a = cpu.a;
     let operand_b = cpu.bus.read(mem);
-    let borrow = !cpu.p.c as u8;
 
-    let result = operand_a - operand_b - borrow;
+    let result = operand_a - operand_b;
     // update flags
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
-    cpu.p.c = !((operand_a as u16) < (operand_b as u16 + borrow as u16));
+    cpu.p.c = !operand_a < operand_b;
     // signed overflow can only occur if a and b have different signage
     cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
 pub fn cpx(cpu: &mut CPU, mem: SysMem) {
     let operand_a = cpu.x;
     let operand_b = cpu.bus.read(mem);
-    let borrow = !cpu.p.c as u8;
 
-    let result = operand_a - operand_b - borrow;
+    let result = operand_a - operand_b;
     // update flags
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
-    cpu.p.c = !((operand_a as u16) < (operand_b as u16 + borrow as u16));
+    cpu.p.c = !operand_a < operand_b;
     // signed overflow can only occur if a and b have different signage
     cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
 pub fn cpy(cpu: &mut CPU, mem: SysMem) {
     let operand_a = cpu.y;
     let operand_b = cpu.bus.read(mem);
-    let borrow = !cpu.p.c as u8;
 
-    let result = operand_a - operand_b - borrow;
+    let result = operand_a - operand_b;
     // update flags
     cpu.p.update_nz(result);
     // carry flag is NOT borrow
-    cpu.p.c = !((operand_a as u16) < (operand_b as u16 + borrow as u16));
+    cpu.p.c = !operand_a < operand_b;
     // signed overflow can only occur if a and b have different signage
     cpu.p.v = ((operand_a ^ operand_b) & (result ^ operand_a) & 0x80) != 0;
 }
