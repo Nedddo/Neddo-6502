@@ -140,6 +140,58 @@ pub fn asl_a(cpu: &mut CPU, _: SysMem) {
     cpu.a <<= 1;
     cpu.p.update_nz(cpu.a);
 }
+// branch instructions
+fn evaluated_branch(cpu: &mut CPU, mem: SysMem) {
+    let offset = cpu.bus.read(mem) as i8; // read immediate val as signed int
+    let old_pc = cpu.pc;
+    cpu.pc += offset as u16;
+    // bitwise op detects if a carry into the high byte occured (equal values xord always evaluate to 0)
+    if (cpu.pc ^ old_pc) > 0xFF {
+        // extra cycle for adjustment
+        cpu.m_op_queue.push_back(dummy_access);
+    }
+}
+
+pub fn beq(cpu: &mut CPU, _: SysMem) {
+    if cpu.p.z {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bne(cpu: &mut CPU, _: SysMem) {
+    if !cpu.p.z {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bcs(cpu: &mut CPU, _: SysMem) {
+    if cpu.p.c {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bcc(cpu: &mut CPU, _: SysMem) {
+    if !cpu.p.c {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bmi(cpu: &mut CPU, _: SysMem) {
+    if cpu.p.n {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bpl(cpu: &mut CPU, _: SysMem) {
+    if !cpu.p.n {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bvs(cpu: &mut CPU, _: SysMem) {
+    if cpu.p.v {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
+pub fn bvc(cpu: &mut CPU, _: SysMem) {
+    if !cpu.p.v {
+        cpu.m_op_queue.push_back(evaluated_branch);
+    }
+}
 
 /* ----- MEMORY MICRO OPS ----- */
 
