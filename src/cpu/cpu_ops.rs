@@ -312,7 +312,7 @@ pub fn jsr(cpu: &mut CPU, _: SysMem) {
     cpu.pc -= 1; // it should push last byte, not next op
     cpu.queue(push_pc_high);
     cpu.queue(push_pc_low);
-    cpu.pc = cpu.bus.address;
+    cpu.queue(transfer_bus_to_pc);
 }
 pub fn brk(cpu: &mut CPU, mem: SysMem) { 
     // read padding byte
@@ -376,7 +376,9 @@ pub fn reset_high(cpu: &mut CPU, mem: SysMem) {
 /* ----- MEMORY MICRO OPS ----- */
 
 
-
+fn transfer_bus_to_pc(cpu: &mut CPU, mem: SysMem) {
+    cpu.pc = cpu.bus.address;
+}
 // used in jsr, brk and interrupt requests
 pub fn push_pc_low (cpu: &mut CPU, mem: SysMem) { 
     let pc_low = (cpu.pc & 0xFF) as u8;
@@ -392,7 +394,7 @@ pub fn pull_pc_low (cpu: &mut CPU, mem: SysMem) {
 pub fn pull_pc_high (cpu: &mut CPU, mem: SysMem) {
     let lo = cpu.bus.data as u16; 
     let hi = pull(cpu, mem) as u16;
-    cpu.bus.address = ( hi << 8 ) | (lo);
+    cpu.bus.address = ( hi << 8 ) | lo;
 }
 // helper for push instructions
 fn push(cpu: &mut CPU, mem: SysMem, data: u8) {
