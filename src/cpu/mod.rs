@@ -4,7 +4,7 @@ pub(super) mod instruction;
 pub(super) mod cpu_ops;
 // imports
 use cpu_bus::Bus;
-use crate::{cpu::instruction::AddressingMode::{self, Accumulator}, memory::Addressable};
+use crate::{cpu::instruction::{AddressingMode::{self, Accumulator}, Operation::JSR}, memory::Addressable};
 use std::collections::VecDeque;
 use cpu_ops::*;
 
@@ -52,36 +52,139 @@ impl CPU {
             self.queue_address_fetch(inst.mode);
 
             match inst.op {
-                Operation::ADC => {
-                    self.queue(adc);
-                }
-                Operation::AND => {
-                    self.queue(and);
-                }
+                Operation::ADC => self.queue(adc),
+                Operation::AND => self.queue(and),
                 Operation::ASL => {
                     if inst.mode == Accumulator { 
                         // accumulator mode is a bit of an edge case
                         self.queue(asl_a);
                     } 
                     else {
-                        self.queue(asl);
+                    self.queue(read_operand);
+                    self.queue(asl);
+                    self.queue(write_back);
                     }
                 }
+                Operation::BCC => self.queue(bcc),
+                Operation::BCS => self.queue(bcs),
+                Operation::BEQ => self.queue(beq),
+                Operation::BIT => self.queue(bit),
+                Operation::BMI => self.queue(bmi),
+                Operation::BNE => self.queue(bne),
+                Operation::BPL => self.queue(bpl),
+                Operation::BRK => self.queue(brk),
+                Operation::BVC => self.queue(bvc),
+                Operation::BVS => self.queue(bvs),
+                Operation::CLC => self.queue(clc),
+                Operation::CLD => self.queue(cld),
+                Operation::CLI => self.queue(cli),
+                Operation::CLV => self.queue(clv),
+                Operation::CMP => self.queue(cmp),
+                Operation::CPX => self.queue(cpx),
+                Operation::CPY => self.queue(cpy),
+                Operation::DEC => {
+                    self.queue(read_operand);
+                    self.queue(dec);
+                    self.queue(write_back);
+                }
+                Operation::DEX => self.queue(dex),
+                Operation::DEY => self.queue(dey),
+                Operation::EOR => self.queue(eor),
                 Operation::INC => {
                     // read-modify-execute
                     self.queue(read_operand);
                     self.queue(inc);
-                    self.queue(write_back)
+                    self.queue(write_back);
                 }
-                Operation::LDA => {
-                    self.queue(lda);
+                Operation::INX => self.queue(inx),
+                Operation::INY => self.queue(iny),
+                Operation::JMP => {
+                    self.queue(jmp);
+                    self.cycle(mem); // <- this is foul
+                    // hacky solution, jmp reads bytes straight to pc
+                    // rather than some special addressing helpers for jump
+                    // I just progress 1 cycle to keep it accurate.
+                    // its really fine for the most part but i cant think of a less upsetting solution
                 }
-                Operation::STA => {
-                    self.queue(sta);
+                Operation::JSR => self.queue(jsr),
+                Operation::LDA => self.queue(lda),
+                Operation::LDX => self.queue(ldx),
+                Operation::LDY => self.queue(ldy),
+                Operation::LSR => {
+                    if inst.mode == Accumulator { 
+                        // accumulator mode is a bit of an edge case
+                        self.queue(lsr_a);
+                    } 
+                    else {
+                    self.queue(read_operand);
+                    self.queue(lsr);
+                    self.queue(write_back);
+                    }
                 }
-                Operation::TAX => {
-                    self.queue(tax);
+                Operation::NOP => self.queue(nop),
+                Operation::ORA => self.queue(ora),
+                Operation::PHA => {
+                    // sorta did these wrongs, I assumed they were more simple
+                    // turns out they do a lot of little bits and pieces across cycles
+                    // these dummy accesses arent a terrible approximation but it could be improved
+                    self.queue(dummy_access);
+                    self.queue(pha);
                 }
+                Operation::PHA => {
+                    self.queue(dummy_access);
+                    self.queue(pha);
+                }
+                Operation::PHP => {
+                    self.queue(dummy_access);
+                    self.queue(php);
+                }
+                Operation::PLA => {
+                    self.queue(dummy_access);
+                    self.queue(dummy_access);
+                    self.queue(pla);
+                }
+                Operation::PLP => {
+                    self.queue(dummy_access);
+                    self.queue(dummy_access);
+                    self.queue(plp);
+                }
+                Operation::ROL => {
+                    if inst.mode == Accumulator { 
+                        // accumulator mode is a bit of an edge case
+                        self.queue(rol_a);
+                    } 
+                    else {
+                    self.queue(read_operand);
+                    self.queue(rol);
+                    self.queue(write_back);
+                    }
+                }
+                Operation::ROR => {
+                    if inst.mode == Accumulator { 
+                        // accumulator mode is a bit of an edge case
+                        self.queue(ror_a);
+                    } 
+                    else {
+                    self.queue(read_operand);
+                    self.queue(ror);
+                    self.queue(write_back);
+                    }
+                }
+                Operation::RTI => self.queue(rti),
+                Operation::RTS => self.queue(rts),
+                Operation::SBC => self.queue(sbc),
+                Operation::SEC => self.queue(sec),
+                Operation::SED => self.queue(sed),
+                Operation::SEI => self.queue(sei),
+                Operation::STA => self.queue(sta),
+                Operation::STX => self.queue(stx),
+                Operation::STY => self.queue(sty),
+                Operation::TAX => self.queue(tax), 
+                Operation::TAY => self.queue(tay),
+                Operation::TSX => self.queue(tsx), 
+                Operation::TXA => self.queue(txa), 
+                Operation::TXS => self.queue(txs), 
+                Operation::TYA => self.queue(tya), 
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
         }
@@ -140,7 +243,7 @@ impl CPU {
                 self.queue(fetch_immediate); 
                 self.queue(fetch_absolute_high);
                 self.queue(fetch_indirect_low);
-                // high fetch is done DURING jmp instruction, which is the only instruction which uses this mode
+                self.queue(fetch_indirect_high)
             }
             _ => {/* do nothing for other addressing modes */}
         }
