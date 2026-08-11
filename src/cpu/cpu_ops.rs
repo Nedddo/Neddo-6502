@@ -309,7 +309,7 @@ pub fn jmp(cpu: &mut CPU, _: SysMem) {
 }
 // interrupts, subroutines
 pub fn jsr(cpu: &mut CPU, _: SysMem) {
-    cpu.pc += 1;
+    cpu.pc -= 1; // it should push last byte, not next op
     cpu.queue(push_pc_high);
     cpu.queue(push_pc_low);
     cpu.pc = cpu.bus.address;
