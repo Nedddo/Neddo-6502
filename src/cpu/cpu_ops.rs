@@ -124,6 +124,10 @@ pub fn stx (cpu: &mut CPU, mem: SysMem) {
 pub fn sty (cpu: &mut CPU, mem: SysMem) {
     cpu.bus.write_value(cpu.y, mem);
 }
+// read modify execute
+pub fn inc(cpu: &mut CPU, _: SysMem) {
+    cpu.bus.data += 1;
+}
 
 /* ----- MEMORY MICRO OPS ----- */
 
@@ -235,4 +239,8 @@ pub fn dummy_access(_: &mut CPU, _: SysMem) {
 // this is for instructions that take an extra cycle to write result back to memory
 pub fn write_back(cpu: &mut CPU, mem: SysMem) {
     cpu.bus.write(mem);
+}
+// likewise for read-mod-write instructions, they cant pipeline the modification during the next ops fetch, so it needs to take an extra cycle to explicitly read operant
+pub fn read_operand(cpu: &mut CPU, mem: SysMem) {
+    cpu.bus.read(mem);
 }

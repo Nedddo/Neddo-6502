@@ -64,6 +64,12 @@ impl CPU {
                 Operation::STA => {
                     self.queue(sta);
                 }
+                Operation::INC => {
+                    // read-modify-execute
+                    self.queue(read_operand);
+                    self.queue(inc);
+                    self.queue(write_back)
+                }
                 _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
             }
         }
