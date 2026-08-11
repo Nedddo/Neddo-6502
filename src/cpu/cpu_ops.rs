@@ -192,7 +192,9 @@ pub fn inc_zpg_y(cpu: &mut CPU, _: SysMem) {
 // indirect addressing
 pub fn fetch_indirect_low(cpu: &mut CPU, mem: SysMem) { 
     cpu.bus.read(mem);
-    cpu.bus.address += 1;
+    // indriect jump bug + zero page wrapping
+    let lo = cpu.bus.address as u8 + 1;
+    cpu.bus.address = (cpu.bus.address & 0xFF00) | lo as u16;
 }
 pub fn fetch_indirect_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data;
