@@ -176,9 +176,8 @@ pub fn sty (cpu: &mut CPU, mem: SysMem) {
     cpu.bus.write_value(cpu.y, mem);
 }
 pub fn php (cpu: &mut CPU, mem: SysMem) {
-    cpu.p.b = true;
+    let p_register = cpu.p.value() | Flags::F_B;
     push(cpu, mem, cpu.p.value());
-    cpu.p.b = false;
 }
 pub fn pha (cpu: &mut CPU, mem: SysMem) {
     push(cpu, mem, cpu.a);
@@ -186,7 +185,6 @@ pub fn pha (cpu: &mut CPU, mem: SysMem) {
 pub fn plp (cpu: &mut CPU, mem: SysMem) {
     let p_val = pull(cpu, mem);
     cpu.p.set(p_val);
-    cpu.p.b = false; // this isnt a real flag
 }
 pub fn pla (cpu: &mut CPU, mem: SysMem) {
     cpu.a = pull(cpu, mem);
@@ -315,10 +313,11 @@ pub fn jsr(cpu: &mut CPU, _: SysMem) {
     cpu.queue(transfer_bus_to_pc);
 }
 pub fn brk(cpu: &mut CPU, mem: SysMem) { 
+    println!("BRK dispatched! pc={:x} a={:x}", cpu.pc, cpu.a);
     // read padding byte
     fetch_immediate(cpu, mem);
     // disable interrupts
-    cpu.p.i = false;
+
     // queue the rest of the brk instruction
     cpu.queue(push_pc_high);
     cpu.queue(push_pc_low);
@@ -355,6 +354,7 @@ pub fn irq_low(cpu: &mut CPU, mem: SysMem) {
 pub fn irq_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
     let hi = cpu.bus.read_at(0xFFFF, mem) as u16;
+    cpu.p.i = true;
     cpu.pc = (hi << 8) | lo;
 }
 pub fn nmi_low(cpu: &mut CPU, mem: SysMem) { 
@@ -363,6 +363,7 @@ pub fn nmi_low(cpu: &mut CPU, mem: SysMem) {
 pub fn nmi_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
     let hi = cpu.bus.read_at(0xFFFB, mem) as u16;
+    cpu.p.i = true;
     cpu.pc = (hi << 8) | lo;
 }
 pub fn reset_low(cpu: &mut CPU, mem: SysMem) { 
@@ -402,6 +403,7 @@ pub fn pull_pc_high (cpu: &mut CPU, mem: SysMem) {
 fn push(cpu: &mut CPU, mem: SysMem, data: u8) {
     let address = 0x0100 | cpu.s as u16;
     cpu.bus.write_value_to(address, data, mem);
+    println!("pushed {:x} to {:x}", data, address);
     cpu.s -= 1;
 }
 fn pull(cpu: &mut CPU, mem: SysMem) -> u8 {

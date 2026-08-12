@@ -24,7 +24,7 @@ impl CPU {
     pub fn new() -> Self {
         Self {
             pc: 0,
-            s: 0,
+            s: 0xFF,
             a: 0,
             x: 0,
             y: 0,
@@ -130,10 +130,6 @@ impl CPU {
                     self.queue(dummy_access);
                     self.queue(pha);
                 }
-                Operation::PHA => {
-                    self.queue(dummy_access);
-                    self.queue(pha);
-                }
                 Operation::PHP => {
                     self.queue(dummy_access);
                     self.queue(php);
@@ -185,7 +181,7 @@ impl CPU {
                 Operation::TXA => self.queue(txa), 
                 Operation::TXS => self.queue(txs), 
                 Operation::TYA => self.queue(tya), 
-                _ => panic!("Unimplemented or Invalid Instruction: {:?}", inst)
+                _ => panic!("Unimplemented or Invalid Instruction at PC={:x} : {:?} : {:x} \n sp: {:x}", self.pc,  inst, opcode, self.s)
             }
         }
     }
@@ -258,7 +254,6 @@ struct Flags {
     // 8-bits encoding 7 flags, bit 5 is forced to 1
     n: bool,
     v: bool,
-    b: bool, // not a real flag as far as the cpu is concerned
     d: bool,
     i: bool,
     z: bool,
@@ -281,7 +276,6 @@ impl Flags {
         let mut val: u8 = Self::F_FIXED; // bit 5 is always 1
         if self.n { val |= Self::F_N }
         if self.v { val |= Self::F_V }
-        if self.b { val |= Self::F_B }
         if self.d { val |= Self::F_D }
         if self.i { val |= Self::F_I }
         if self.z { val |= Self::F_Z }
@@ -292,7 +286,6 @@ impl Flags {
     fn set(&mut self, val: u8) {
         self.n = (val & Self::F_N) == Self::F_N;
         self.v = (val & Self::F_V) == Self::F_V;
-        self.b = (val & Self::F_B) == Self::F_B;
         self.d = (val & Self::F_D) == Self::F_D;
         self.i = (val & Self::F_I) == Self::F_I;
         self.z = (val & Self::F_Z) == Self::F_Z;
