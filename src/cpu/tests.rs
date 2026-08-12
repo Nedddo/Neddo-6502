@@ -432,123 +432,136 @@ mod address_modes_fixed_test {
 mod cpu_functionality_tests {
     use super::*;
     #[test]
-    fn cpu_tax_test() {
+    fn cpu_brk_test() {
         let mut mem = TestMemory::new();
-        // write TAX
-        mem.write(0, 0xAA);
+        // write BRK
+        mem.write(0, 0x00);
+        // init irq vector
+        mem.write(0xFFFE, 0xEF);
+        mem.write(0xFFFF, 0xBE);
         let mut cpu = CPU::new();
-        // give register a some value
-        cpu.a = 0x67;
-        // -- test 1
-        println!("Testing register transfer...");
+        // initialize stack
+        cpu.s = 0xFF;
+        cpu.p.set(0);
 
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
+        let mut cycles = 0;
+        loop {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+            if cpu.m_op_queue.is_empty() { break; }
+        }
 
-        assert_eq!(cpu.x, cpu.a);
-        assert_eq!(cpu.p.n, false);
-        assert_eq!(cpu.p.z, false);
-
-        println!("Test Passed!");
-        // -- test 2
-        println!("Testing zero flag updates...");
-        
-        cpu.pc = 0;
-        cpu.a = 0;
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.p.z, true);
-
-        println!("Test Passed!");
-        // -- test 3
-        println!("Testing negative flag updates...");
-
-        cpu.pc = 0;
-        cpu.a = 0x80;
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.p.n, true);
-
-        println!("Test Passed!");
-
+        assert_eq!(cycles, 7);
+        assert_eq!(cpu.s, 0xFC);
+        assert_eq!(cpu.p.i, true);
+        assert_eq!(cpu.pc, 0xBEEF);
+        assert_eq!(mem.read(0x01FF), 0);
+        assert_eq!(mem.read(0x01FE), 2);
     }
     #[test]
-    fn cpu_adc_test() {
+    fn cpu_rti_test() {
         let mut mem = TestMemory::new();
-        // write adc immediate
-        mem.write(0, 0x69); // 69 and 67!!!
-        mem.write(1, 0x67);
+        // write BRK
+        mem.write(0, 0x00);
+        // init irq vector
+        mem.write(0xFFFE, 0xEF);
+        mem.write(0xFFFF, 0xBE);
         let mut cpu = CPU::new();
-        // give register a some value
-        cpu.a = 0x10;
-        // -- test 1
-        println!("Testing addition...");
+        cpu.p.set(0);
+        // initialize stack
+        cpu.s = 0xFF;
+        // use brk to push 
+        loop {
+            cpu.cycle(&mut mem);
+            if cpu.m_op_queue.is_empty() { break; }
+        }
 
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
+        mem.write(0xBEEF, 0x40);
 
-        assert_eq!(cpu.a, 0x77);
+        let mut cycles = 0;
+        loop {
+            cpu.cycle(&mut mem);
+            cycles += 1;
+            println!("{:?}", cpu.p);
+            println!("{:08b}", cpu.p.value());
+            if cpu.m_op_queue.is_empty() { break; }
+        }
 
-        println!("Test Passed!");
+        assert_eq!(cycles, 6);
+        assert_eq!(cpu.p.value(), Flags::F_FIXED);
+        assert_eq!(cpu.pc, 0x02);
 
-        println!("Testing add where carry is true...");
-
-        cpu.pc = 0;
-        cpu.a = 0x0;
-        cpu.p.c = true;
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.a, 0x68);
-
-        println!("Test Passed!");
-
-        println!("Testing add where carry occurs...");
-
-        cpu.pc = 0;
-        cpu.a = 0xF9;
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.a, 0x60);
-        assert_eq!(cpu.p.c, true);
-        assert_eq!(cpu.p.v, false);
-
-        println!("Test Passed!");
-
-        println!("Testing add where carry and overflow occurs...");
-
-        cpu.pc = 0;
-        cpu.a = 0x80;
-        mem.write(1, 0x80);
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.p.c, true);
-        assert_eq!(cpu.p.v, true);
-
-        println!("Test Passed!");
-        println!("Testing add where only overflow occurs...");
-
-        cpu.pc = 0;
-        cpu.a = 0x7F;
-        cpu.p.c = true; 
-        mem.write(1, 0x00);
-        // 127 + 00 + 1 = -128
-
-        cpu.cycle(&mut mem);
-        cpu.cycle(&mut mem);
-
-        assert_eq!(cpu.p.c, false);
-        assert_eq!(cpu.p.v, true);
-
-        println!("Test Passed!");
     }
+#[test]
+fn cpu_jsr_test() {
+    let mut mem = TestMemory::new();
+
+    // JSR $1234
+    mem.write(0x0000, 0x20);
+    mem.write(0x0001, 0x34);
+    mem.write(0x0002, 0x12);
+
+    let mut cpu = CPU::new();
+    cpu.s = 0xFF;
+
+    let mut cycles = 0;
+    loop {
+        cpu.cycle(&mut mem);
+        cycles += 1;
+
+        if cpu.m_op_queue.is_empty() {
+            break;
+        }
+    }
+
+    // JSR takes 6 cycles.
+    assert_eq!(cycles, 6);
+
+    // Execution should have jumped to $1234.
+    assert_eq!(cpu.pc, 0x1234);
+
+    // JSR pushes two bytes, so SP goes from FF -> FD.
+    assert_eq!(cpu.s, 0xFD);
+
+    // JSR pushes PC - 1, i.e. the address of the
+    // last byte of the JSR instruction: $0002.
+    //
+    // Stack grows downward, and the high byte is pushed first.
+    assert_eq!(mem.read(0x01FF), 0x00);
+    assert_eq!(mem.read(0x01FE), 0x02);
+}
+}
+
+#[cfg(test)]
+mod klaus_test {
+    use super::*;
+    use std::fs;
+
+    fn setup() -> (CPU, TestMemory) {
+        let cpu = CPU::new();
+        let mem = TestMemory::new();
+        (cpu, mem)
+    }
+    #[test]
+    fn run_test() {
+        let binary = fs::read("binaries/6502_functional_test(1).bin").unwrap();
+        let (mut cpu, mut mem) = setup();
+        mem.load(binary);
+
+        // set pc to start
+        cpu.pc = 0x400;
+
+        let mut last_address = 0;
+        let mut this_address = 0;
+        loop {
+            if cpu.m_op_queue.is_empty() {
+                last_address = this_address;
+                this_address = cpu.pc;
+                if this_address == 0x3469 {println!("All tests pass!"); break;}
+                if last_address == this_address { panic!("Trap Hit: {:x}", cpu.pc) }
+            }
+            cpu.cycle(&mut mem);
+        }
+    }
+
 }

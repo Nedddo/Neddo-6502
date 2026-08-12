@@ -30,6 +30,7 @@ pub fn txs(cpu: &mut CPU, _: SysMem) {
 }
 pub fn tsx(cpu: &mut CPU, _: SysMem) {
     cpu.x = cpu.s;
+    cpu.p.update_nz(cpu.x);
 }
 // register increments
 pub fn inx(cpu: &mut CPU, _: SysMem) {
@@ -177,7 +178,7 @@ pub fn sty (cpu: &mut CPU, mem: SysMem) {
 }
 pub fn php (cpu: &mut CPU, mem: SysMem) {
     let p_register = cpu.p.value() | Flags::F_B;
-    push(cpu, mem, cpu.p.value());
+    push(cpu, mem, p_register);
 }
 pub fn pha (cpu: &mut CPU, mem: SysMem) {
     push(cpu, mem, cpu.a);
@@ -226,28 +227,32 @@ pub fn lsr_a(cpu: &mut CPU, _: SysMem) {
 
 pub fn rol(cpu: &mut CPU, _: SysMem) {
     // check if bit 7 is shifted out
-    cpu.p.c = (cpu.bus.data & 0x80 ) != 0;
+    let carry_out = (cpu.bus.data & 0x80 ) != 0;
     cpu.bus.data <<= 1;
     cpu.bus.data |= cpu.p.c as u8;
+    cpu.p.c = carry_out;
     cpu.p.update_nz(cpu.bus.data);
 }
 pub fn rol_a(cpu: &mut CPU, _: SysMem) {
-    cpu.p.c = (cpu.a & 0x80 ) != 0;
+    let carry_out = (cpu.a& 0x80 ) != 0;
     cpu.a <<= 1;
-    cpu.bus.data |= cpu.p.c as u8;
+    cpu.a |= cpu.p.c as u8;
+    cpu.p.c = carry_out;
     cpu.p.update_nz(cpu.a);
 }
 pub fn ror(cpu: &mut CPU, _: SysMem) {
     // check if bit 7 is shifted out
-    cpu.p.c = (cpu.bus.data & 0x01) != 0;
+    let carry_out = (cpu.bus.data & 0x01 ) != 0;
     cpu.bus.data >>= 1;
     cpu.bus.data |= (cpu.p.c as u8) << 7;
+    cpu.p.c = carry_out;
     cpu.p.update_nz(cpu.bus.data);
 }
 pub fn ror_a(cpu: &mut CPU, _: SysMem) {
-    cpu.p.c = (cpu.a & 0x01 ) != 0;
+    let carry_out = (cpu.a & 0x01 ) != 0;
     cpu.a >>= 1;
-    cpu.bus.data |= (cpu.p.c as u8) << 7;
+    cpu.a|= (cpu.p.c as u8) << 7;
+    cpu.p.c = carry_out;
     cpu.p.update_nz(cpu.a);
 }
 // branch instructions
@@ -306,11 +311,12 @@ pub fn jmp(cpu: &mut CPU, _: SysMem) {
     cpu.pc = cpu.bus.address;
 }
 // interrupts, subroutines
-pub fn jsr(cpu: &mut CPU, _: SysMem) {
+pub fn jsr(cpu: &mut CPU, mem: SysMem) {
     cpu.pc -= 1; // it should push last byte, not next op
-    cpu.queue(push_pc_high);
+    cpu.tmp_address = cpu.bus.address;
+    push_pc_high(cpu, mem);
     cpu.queue(push_pc_low);
-    cpu.queue(transfer_bus_to_pc);
+    cpu.queue(|cpu,_| cpu.pc = cpu.tmp_address);
 }
 pub fn brk(cpu: &mut CPU, mem: SysMem) { 
     println!("BRK dispatched! pc={:x} a={:x}", cpu.pc, cpu.a);
@@ -457,7 +463,7 @@ pub fn fetch_absolute_x_fixed(cpu: &mut CPU, mem: SysMem) {
     let lo = cpu.bus.data;
     let hi = cpu.bus.read_at(cpu.pc, mem);
     // calculate address
-    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.x as u16;
+    cpu.bus.address = (((hi as u16) << 8) | (lo as u16)) + cpu.x as u16;
     cpu.m_op_queue.push_front(dummy_access);
     cpu.pc += 1;
 }
@@ -465,7 +471,7 @@ pub fn fetch_absolute_y_fixed(cpu: &mut CPU, mem: SysMem) {
     let lo = cpu.bus.data;
     let hi = cpu.bus.read_at(cpu.pc, mem);
     // calculate address
-    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.y as u16;
+    cpu.bus.address = (((hi as u16) << 8) | (lo as u16)) + cpu.y as u16;
     cpu.m_op_queue.push_front(dummy_access);
     cpu.pc += 1;
 }
@@ -509,7 +515,7 @@ pub fn fetch_indirect_high_y(cpu: &mut CPU, mem: SysMem) {
 pub fn fetch_indirect_high_y_fixed(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data;
     let hi = cpu.bus.read(mem);
-    cpu.bus.address = ((hi as u16) << 8) | (lo as u16) + cpu.y as u16;
+    cpu.bus.address = (((hi as u16) << 8) | (lo as u16) )+ cpu.y as u16;
     cpu.m_op_queue.push_front(dummy_access);
 }
 pub fn dummy_access(_: &mut CPU, _: SysMem) {

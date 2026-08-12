@@ -1,3 +1,5 @@
+use std::vec;
+
 // trait to be implemented for system-specific memory configurations
 pub trait Addressable {
     fn read (&self, address: u16) -> u8;
@@ -14,6 +16,9 @@ impl TestMemory {
         Self {
             memory: [0u8; 0x10000]
         }
+    }
+    pub fn load(&mut self, data: Vec<u8>) {
+        self.memory = data.try_into().expect("too little memory");
     }
 }
 

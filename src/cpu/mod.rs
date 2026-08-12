@@ -16,6 +16,7 @@ pub struct CPU {
     y: u8,
     p: Flags,
     bus: Bus, // cpu bus, represents hardwired connection between cpu and memory
+    tmp_address: u16, // used for jsr, TODO: use this instead of address bus, address bus works everywhere else but If im doing this might as well use it 
     m_op_queue: VecDeque<for<'a> fn(&mut CPU, &'a mut (dyn Addressable + 'a))>,
 }
 
@@ -30,6 +31,7 @@ impl CPU {
             y: 0,
             p: Flags::default(),
             bus: Bus::new(),
+            tmp_address: 0, 
             m_op_queue: VecDeque::new(),
         }
     }
