@@ -317,6 +317,8 @@ pub fn jsr(cpu: &mut CPU, _: SysMem) {
 pub fn brk(cpu: &mut CPU, mem: SysMem) { 
     // read padding byte
     fetch_immediate(cpu, mem);
+    // disable interrupts
+    cpu.p.i = false;
     // queue the rest of the brk instruction
     cpu.queue(push_pc_high);
     cpu.queue(push_pc_low);
@@ -352,8 +354,8 @@ pub fn irq_low(cpu: &mut CPU, mem: SysMem) {
 }
 pub fn irq_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
-    let hi = cpu.bus.read_at(0xFFFE, mem) as u16;
-    cpu.bus.address = (hi << 8) | lo;
+    let hi = cpu.bus.read_at(0xFFFF, mem) as u16;
+    cpu.pc = (hi << 8) | lo;
 }
 pub fn nmi_low(cpu: &mut CPU, mem: SysMem) { 
     cpu.bus.read_at(0xFFFA, mem);
@@ -361,7 +363,7 @@ pub fn nmi_low(cpu: &mut CPU, mem: SysMem) {
 pub fn nmi_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
     let hi = cpu.bus.read_at(0xFFFB, mem) as u16;
-    cpu.bus.address = (hi << 8) | lo;
+    cpu.pc = (hi << 8) | lo;
 }
 pub fn reset_low(cpu: &mut CPU, mem: SysMem) { 
     cpu.bus.read_at(0xFFFC, mem);
@@ -369,7 +371,7 @@ pub fn reset_low(cpu: &mut CPU, mem: SysMem) {
 pub fn reset_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
     let hi = cpu.bus.read_at(0xFFFD, mem) as u16;
-    cpu.bus.address = (hi << 8) | lo;
+    cpu.pc = (hi << 8) | lo;
 }
 
 
@@ -394,7 +396,7 @@ pub fn pull_pc_low (cpu: &mut CPU, mem: SysMem) {
 pub fn pull_pc_high (cpu: &mut CPU, mem: SysMem) {
     let lo = cpu.bus.data as u16; 
     let hi = pull(cpu, mem) as u16;
-    cpu.bus.address = ( hi << 8 ) | lo;
+    cpu.pc = ( hi << 8 ) | lo;
 }
 // helper for push instructions
 fn push(cpu: &mut CPU, mem: SysMem, data: u8) {
