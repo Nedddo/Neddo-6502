@@ -319,11 +319,8 @@ pub fn jsr(cpu: &mut CPU, mem: SysMem) {
     cpu.queue(|cpu,_| cpu.pc = cpu.tmp_address);
 }
 pub fn brk(cpu: &mut CPU, mem: SysMem) { 
-    println!("BRK dispatched! pc={:x} a={:x}", cpu.pc, cpu.a);
     // read padding byte
     fetch_immediate(cpu, mem);
-    // disable interrupts
-
     // queue the rest of the brk instruction
     cpu.queue(push_pc_high);
     cpu.queue(push_pc_low);
@@ -378,7 +375,13 @@ pub fn reset_low(cpu: &mut CPU, mem: SysMem) {
 pub fn reset_high(cpu: &mut CPU, mem: SysMem) { 
     let lo = cpu.bus.data as u16;
     let hi = cpu.bus.read_at(0xFFFD, mem) as u16;
+    cpu.p.i = true;
     cpu.pc = (hi << 8) | lo;
+}
+// hardware interrupts don't set B flag
+pub fn php_hw (cpu: &mut CPU, mem: SysMem) {
+    let p_register = cpu.p.value();
+    push(cpu, mem, p_register);
 }
 
 

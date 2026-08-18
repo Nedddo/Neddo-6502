@@ -187,7 +187,16 @@ impl CPU {
             }
         }
     }
-    // TODO: Implement reset
+    pub fn reset(&mut self, mem: &mut dyn Addressable) {
+        self.m_op_queue.clear();
+        self.queue(dummy_access);
+        self.queue(dummy_access);
+        self.queue(push_pc_high);
+        self.queue(push_pc_low);
+        self.queue(php_hw);
+        self.queue(pull_pc_low);
+        self.queue(pull_pc_high);
+    }
 }
 
 // private helpers
