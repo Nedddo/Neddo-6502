@@ -1,5 +1,5 @@
 [package]
-name = "emulator"
+name = "Neddo6502"
 version = "0.1.0"
 edition = "2024"
 # overflows are pretty good for an emulator
