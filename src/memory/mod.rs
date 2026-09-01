@@ -2,7 +2,7 @@ use std::vec;
 
 // trait to be implemented for system-specific memory configurations
 pub trait Addressable {
-    fn read (&self, address: u16) -> u8;
+    fn read (&mut self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
 }
 
@@ -23,7 +23,7 @@ impl TestMemory {
 }
 
 impl Addressable for TestMemory {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         self.memory[address as usize]
     }
     fn write(&mut self, address: u16, data: u8) {

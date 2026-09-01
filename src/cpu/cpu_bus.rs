@@ -16,11 +16,11 @@ impl Bus {
 
 impl Bus {
     // reads
-    pub fn read(&mut self, memory: &dyn Addressable) -> u8 {
+    pub fn read(&mut self, memory: &mut dyn Addressable) -> u8 {
         self.data = memory.read(self.address);
         self.data
     }
-    pub fn read_at(&mut self, address: u16, memory: &dyn Addressable) -> u8 {
+    pub fn read_at(&mut self, address: u16, memory: &mut dyn Addressable) -> u8 {
         self.address = address;
         self.read(memory)
     }
