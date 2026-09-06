@@ -412,7 +412,6 @@ pub fn pull_pc_high (cpu: &mut CPU, mem: SysMem) {
 fn push(cpu: &mut CPU, mem: SysMem, data: u8) {
     let address = 0x0100 | cpu.s as u16;
     cpu.bus.write_value_to(address, data, mem);
-    println!("pushed {:x} to {:x}", data, address);
     cpu.s -= 1;
 }
 fn pull(cpu: &mut CPU, mem: SysMem) -> u8 {
